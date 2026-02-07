@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { notifyAdminNewRegistration } from "@/lib/email";
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -50,6 +51,13 @@ export async function POST(req: NextRequest) {
         companyId: company.id,
       },
     });
+
+    // Fire-and-forget admin notification
+    notifyAdminNewRegistration({
+      name: data.name,
+      email: data.email,
+      companyName: data.companyName,
+    }).catch((err) => console.error("Failed to send admin notification:", err));
 
     return NextResponse.json(
       {

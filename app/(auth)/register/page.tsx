@@ -75,7 +75,7 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="flex min-h-screen items-center justify-center bg-white px-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Registration Successful</CardTitle>
@@ -98,142 +98,160 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
+    <div className="flex min-h-screen">
+      {/* Left panel - brand (desktop only) */}
+      <div className="hidden flex-col justify-center bg-eppione-navy px-12 lg:flex lg:w-1/2">
+        <Link href="/" className="inline-flex items-center gap-3">
+          <Monitor className="h-10 w-10 text-eppione-cyan" />
+          <span className="text-3xl font-bold text-white">Eppione</span>
+        </Link>
+        <p className="mt-4 text-lg text-white/80">
+          Join leading companies benchmarking their employee benefits.
+        </p>
+        <p className="mt-2 text-sm text-white/60">
+          Get started in minutes. Compare across 11 countries and 20+ industries.
+        </p>
+      </div>
+
+      {/* Right panel - form */}
+      <div className="flex flex-1 flex-col items-center justify-center bg-white px-4 py-12">
+        {/* Mobile brand header */}
+        <div className="mb-8 text-center lg:hidden">
           <Link href="/" className="inline-flex items-center gap-2">
-            <Monitor className="h-8 w-8 text-indigo-600" />
-            <span className="text-2xl font-bold text-slate-900">Eppione</span>
+            <Monitor className="h-8 w-8 text-eppione-cyan" />
+            <span className="text-2xl font-bold text-eppione-navy">Eppione</span>
           </Link>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Create Account</CardTitle>
-            <CardDescription>
-              Register to start benchmarking your benefits
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
+        <div className="w-full max-w-md">
+          <Card>
+            <CardHeader>
+              <CardTitle>Create Account</CardTitle>
+              <CardDescription>
+                Register to start benchmarking your benefits
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {error && (
+                <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => updateField("name", e.target.value)}
-                  required
-                />
-              </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => updateField("name", e.target.value)}
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="reg-email">Work Email</Label>
-                <Input
-                  id="reg-email"
-                  type="email"
-                  placeholder="you@company.com"
-                  value={formData.email}
-                  onChange={(e) => updateField("email", e.target.value)}
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-email">Work Email</Label>
+                  <Input
+                    id="reg-email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={formData.email}
+                    onChange={(e) => updateField("email", e.target.value)}
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="reg-password">Password</Label>
-                <Input
-                  id="reg-password"
-                  type="password"
-                  placeholder="Minimum 8 characters"
-                  value={formData.password}
-                  onChange={(e) => updateField("password", e.target.value)}
-                  minLength={8}
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-password">Password</Label>
+                  <Input
+                    id="reg-password"
+                    type="password"
+                    placeholder="Minimum 8 characters"
+                    value={formData.password}
+                    onChange={(e) => updateField("password", e.target.value)}
+                    minLength={8}
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name</Label>
-                <Input
-                  id="companyName"
-                  value={formData.companyName}
-                  onChange={(e) => updateField("companyName", e.target.value)}
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Company Name</Label>
+                  <Input
+                    id="companyName"
+                    value={formData.companyName}
+                    onChange={(e) => updateField("companyName", e.target.value)}
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label>Country</Label>
-                <Select
-                  value={formData.country}
-                  onValueChange={(v) => updateField("country", v)}
+                <div className="space-y-2">
+                  <Label>Country</Label>
+                  <Select
+                    value={formData.country}
+                    onValueChange={(v) => updateField("country", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(COUNTRY_LABELS).map(([code, name]) => (
+                        <SelectItem key={code} value={code}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Industry (NACE)</Label>
+                  <Select
+                    value={formData.industry}
+                    onValueChange={(v) => updateField("industry", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select industry" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(NACE_INDUSTRIES).map(([code, name]) => (
+                        <SelectItem key={code} value={code}>
+                          {code} - {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="employeeCount">Number of Employees</Label>
+                  <Input
+                    id="employeeCount"
+                    type="number"
+                    min={1}
+                    value={formData.employeeCount}
+                    onChange={(e) => updateField("employeeCount", e.target.value)}
+                    required
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Creating Account..." : "Create Account"}
+                </Button>
+              </form>
+            </CardContent>
+            <CardFooter className="justify-center">
+              <p className="text-sm text-slate-500">
+                Already have an account?{" "}
+                <Link
+                  href="/login"
+                  className="font-medium text-eppione-cyan hover:underline"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(COUNTRY_LABELS).map(([code, name]) => (
-                      <SelectItem key={code} value={code}>
-                        {name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Industry (NACE)</Label>
-                <Select
-                  value={formData.industry}
-                  onValueChange={(v) => updateField("industry", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select industry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(NACE_INDUSTRIES).map(([code, name]) => (
-                      <SelectItem key={code} value={code}>
-                        {code} - {name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="employeeCount">Number of Employees</Label>
-                <Input
-                  id="employeeCount"
-                  type="number"
-                  min={1}
-                  value={formData.employeeCount}
-                  onChange={(e) => updateField("employeeCount", e.target.value)}
-                  required
-                />
-              </div>
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Creating Account..." : "Create Account"}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="justify-center">
-            <p className="text-sm text-slate-500">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="font-medium text-indigo-600 hover:underline"
-              >
-                Sign In
-              </Link>
-            </p>
-          </CardFooter>
-        </Card>
+                  Sign In
+                </Link>
+              </p>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
     </div>
   );

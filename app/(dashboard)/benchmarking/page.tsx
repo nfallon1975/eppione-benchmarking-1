@@ -69,16 +69,19 @@ interface MyBenefit {
 }
 
 export default function BenchmarkingPage() {
-  useSession();
+  const { data: session } = useSession();
   const [country, setCountry] = useState("");
   const [industry, setIndustry] = useState("all");
+  const [companyIndustry, setCompanyIndustry] = useState<string | null>(null);
   const [benchmarkData, setBenchmarkData] = useState<BenchmarkData | null>(
     null
   );
   const [myBenefits, setMyBenefits] = useState<MyBenefit[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Load user's company country
+  const isClient = session?.user?.role === "CLIENT";
+
+  // Load user's company country and industry
   useEffect(() => {
     async function loadCompany() {
       try {
@@ -87,6 +90,9 @@ export default function BenchmarkingPage() {
           const data = await res.json();
           setCountry(data.country);
           setMyBenefits(data.benefitEntries || []);
+          if (data.industry) {
+            setCompanyIndustry(data.industry);
+          }
         }
       } catch (err) {
         console.error(err);
@@ -181,8 +187,14 @@ export default function BenchmarkingPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Industry (optional)</Label>
-              <Select value={industry} onValueChange={setIndustry}>
+              <Label>
+                Industry{isClient ? " (your industry)" : " (optional)"}
+              </Label>
+              <Select
+                value={isClient && companyIndustry ? companyIndustry : industry}
+                onValueChange={setIndustry}
+                disabled={isClient}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="All industries" />
                 </SelectTrigger>
@@ -267,7 +279,7 @@ export default function BenchmarkingPage() {
                       <Bar
                         dataKey="yourCost"
                         name="Your Cost"
-                        fill="#6366f1"
+                        fill="#00B4D8"
                         radius={[4, 4, 0, 0]}
                       />
                       <Bar
@@ -323,8 +335,8 @@ export default function BenchmarkingPage() {
                       <Radar
                         name="You"
                         dataKey="you"
-                        stroke="#6366f1"
-                        fill="#6366f1"
+                        stroke="#00B4D8"
+                        fill="#00B4D8"
                         fillOpacity={0.3}
                       />
                       <Legend />
@@ -391,7 +403,7 @@ export default function BenchmarkingPage() {
                         {myBenefit?.annualCostPerEmployee && (
                           <>
                             <div className="text-slate-500">Your cost:</div>
-                            <div className="font-bold text-indigo-600">
+                            <div className="font-bold text-eppione-cyan">
                               {formatCurrency(
                                 myBenefit.annualCostPerEmployee,
                                 myBenefit.costCurrency

@@ -254,7 +254,7 @@ export default function DashboardPage() {
                 <Link href="/company" className="block">
                   <div className="flex items-center justify-between rounded-md border p-4 transition-colors hover:bg-slate-50">
                     <div className="flex items-center gap-3">
-                      <Building2 className="h-5 w-5 text-indigo-600" />
+                      <Building2 className="h-5 w-5 text-eppione-cyan" />
                       <div>
                         <p className="text-sm font-medium">
                           Update Company Profile
@@ -270,7 +270,7 @@ export default function DashboardPage() {
                 <Link href="/benefits" className="block">
                   <div className="flex items-center justify-between rounded-md border p-4 transition-colors hover:bg-slate-50">
                     <div className="flex items-center gap-3">
-                      <Heart className="h-5 w-5 text-indigo-600" />
+                      <Heart className="h-5 w-5 text-eppione-cyan" />
                       <div>
                         <p className="text-sm font-medium">Manage Benefits</p>
                         <p className="text-xs text-slate-500">
@@ -284,7 +284,7 @@ export default function DashboardPage() {
                 <Link href="/benchmarking" className="block">
                   <div className="flex items-center justify-between rounded-md border p-4 transition-colors hover:bg-slate-50">
                     <div className="flex items-center gap-3">
-                      <BarChart3 className="h-5 w-5 text-indigo-600" />
+                      <BarChart3 className="h-5 w-5 text-eppione-cyan" />
                       <div>
                         <p className="text-sm font-medium">
                           View Benchmarking

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { notifyUserApproved, notifyUserRejected } from "@/lib/email";
 import { z } from "zod";
 
 const updateUserStatusSchema = z.object({
@@ -40,6 +41,7 @@ export async function GET() {
             id: true,
             name: true,
             country: true,
+            industry: true,
             employeeCount: true,
           },
         },
@@ -106,6 +108,21 @@ export async function PATCH(req: NextRequest) {
         },
       },
     });
+
+    // Fire-and-forget user notification
+    const notifyPayload = {
+      name: updatedUser.name || "User",
+      email: updatedUser.email,
+    };
+    if (status === "APPROVED") {
+      notifyUserApproved(notifyPayload).catch((err) =>
+        console.error("Failed to send approval notification:", err)
+      );
+    } else if (status === "REJECTED") {
+      notifyUserRejected(notifyPayload).catch((err) =>
+        console.error("Failed to send rejection notification:", err)
+      );
+    }
 
     return NextResponse.json(updatedUser);
   } catch (error) {

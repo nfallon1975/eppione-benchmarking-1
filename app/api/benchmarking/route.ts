@@ -36,8 +36,19 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const country = searchParams.get("country");
-    const industry = searchParams.get("industry");
+    let industry = searchParams.get("industry");
     const benefitCategory = searchParams.get("benefitCategory");
+
+    // CLIENT users are locked to their company's industry
+    if (session.user.role === "CLIENT" && session.user.companyId) {
+      const company = await prisma.company.findUnique({
+        where: { id: session.user.companyId },
+        select: { industry: true },
+      });
+      if (company?.industry) {
+        industry = company.industry;
+      }
+    }
 
     if (!country) {
       return NextResponse.json(

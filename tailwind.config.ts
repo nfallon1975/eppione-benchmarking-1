@@ -43,6 +43,10 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        eppione: {
+          navy: "hsl(var(--eppione-navy))",
+          cyan: "hsl(var(--eppione-cyan))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

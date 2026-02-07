@@ -5,20 +5,20 @@ import { Monitor, BarChart3, Shield, Globe2 } from "lucide-react";
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      <header className="border-b bg-white/80 backdrop-blur-sm">
+      <header className="bg-eppione-navy">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
-            <Monitor className="h-7 w-7 text-indigo-600" />
-            <span className="text-xl font-bold text-slate-900">
+            <Monitor className="h-7 w-7 text-eppione-cyan" />
+            <span className="text-xl font-bold text-white">
               Eppione Benchmarking
             </span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/login">
-              <Button variant="ghost">Sign In</Button>
+              <Button variant="ghost" className="text-white/80 hover:bg-white/10 hover:text-white">Sign In</Button>
             </Link>
             <Link href="/register">
-              <Button>Get Started</Button>
+              <Button className="bg-eppione-cyan text-white hover:bg-eppione-cyan/90">Get Started</Button>
             </Link>
           </div>
         </div>
@@ -29,7 +29,7 @@ export default function HomePage() {
           <h1 className="text-5xl font-bold tracking-tight text-slate-900">
             Benchmark Your Employee Benefits
             <br />
-            <span className="text-indigo-600">Against the Market</span>
+            <span className="text-eppione-cyan">Against the Market</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-600">
             Understand how your benefits package compares to industry peers.
@@ -38,7 +38,7 @@ export default function HomePage() {
           </p>
           <div className="mt-10 flex items-center justify-center gap-4">
             <Link href="/register">
-              <Button size="lg" className="text-base">
+              <Button size="lg" className="bg-eppione-cyan text-white hover:bg-eppione-cyan/90 text-base">
                 Start Benchmarking
               </Button>
             </Link>
@@ -53,7 +53,7 @@ export default function HomePage() {
         <section className="mx-auto max-w-7xl px-6 pb-24">
           <div className="grid gap-8 md:grid-cols-3">
             <div className="rounded-lg border bg-white p-8 shadow-sm">
-              <BarChart3 className="h-10 w-10 text-indigo-600" />
+              <BarChart3 className="h-10 w-10 text-eppione-cyan" />
               <h3 className="mt-4 text-lg font-semibold text-slate-900">
                 Market Benchmarking
               </h3>
@@ -64,7 +64,7 @@ export default function HomePage() {
               </p>
             </div>
             <div className="rounded-lg border bg-white p-8 shadow-sm">
-              <Globe2 className="h-10 w-10 text-indigo-600" />
+              <Globe2 className="h-10 w-10 text-eppione-cyan" />
               <h3 className="mt-4 text-lg font-semibold text-slate-900">
                 Multi-Country Support
               </h3>
@@ -75,7 +75,7 @@ export default function HomePage() {
               </p>
             </div>
             <div className="rounded-lg border bg-white p-8 shadow-sm">
-              <Shield className="h-10 w-10 text-indigo-600" />
+              <Shield className="h-10 w-10 text-eppione-cyan" />
               <h3 className="mt-4 text-lg font-semibold text-slate-900">
                 Confidential &amp; Secure
               </h3>
@@ -89,7 +89,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t bg-slate-50 py-8 text-center text-sm text-slate-500">
+      <footer className="bg-eppione-navy py-8 text-center text-sm text-white/70">
         Eppione Benchmarking &mdash; Employee Benefits Intelligence
       </footer>
     </div>

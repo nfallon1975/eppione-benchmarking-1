@@ -70,6 +70,14 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid email or password");
         }
 
+        if (user.status === "PENDING") {
+          throw new Error("Your account is pending approval");
+        }
+
+        if (user.status === "REJECTED") {
+          throw new Error("Your account has not been approved");
+        }
+
         return {
           id: user.id,
           email: user.email,
