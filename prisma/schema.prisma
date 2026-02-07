@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  CLIENT
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BenefitCategory {
+  HEALTH
+  LIFE
+  DISABILITY
+  PENSION
+  DENTAL
+  VISION
+  EAP
+  WELLNESS
+  INCOME_PROTECTION
+  CRITICAL_ILLNESS
+  TRAVEL
+  MEAL_VOUCHERS
+  TRANSPORT
+  CHILDCARE
+  EDUCATION
+  OTHER
+}
+
+enum PlatformType {
+  FLEX_BENEFITS
+  TOTAL_REWARD
+  VOLUNTARY
+  DISCOUNT
+  WELLBEING
+  OTHER
+}
+
+enum FeeModel {
+  PER_EMPLOYEE_PER_MONTH
+  PER_EMPLOYEE_PER_YEAR
+  FLAT_FEE
+  PERCENTAGE
+  OTHER
+}
+
+model User {
+  id             String     @id @default(cuid())
+  email          String     @unique
+  passwordHash   String?
+  name           String?
+  role           UserRole   @default(CLIENT)
+  status         UserStatus @default(PENDING)
+  emailVerified  DateTime?
+  companyId      String?
+  company        Company?   @relation(fields: [companyId], references: [id])
+  accounts       Account[]
+  sessions       Session[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([email])
+  @@index([companyId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Company {
+  id                    String          @id @default(cuid())
+  name                  String
+  country               String          // ISO 3166-1 alpha-2
+  industry              String          // NACE/ISIC classification code
+  employeeCount         Int
+  averageSalary         Float?
+  averageSalaryCurrency String?
+  averageBonus          Float?
+  averageBonusCurrency  String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  users                 User[]
+  benefitEntries        BenefitEntry[]
+  platformInfo          PlatformInfo[]
+
+  @@index([country])
+  @@index([industry])
+}
+
+model BenefitEntry {
+  id                          String          @id @default(cuid())
+  companyId                   String
+  company                     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  benefitCategory             BenefitCategory
+  benefitName                 String
+  coverLevel                  String          // e.g. "2x salary", "€50,000", "75% of salary"
+  employerFunded              Boolean         @default(true)
+  employeeContributionPercent Float?
+  coversSpouse                Boolean         @default(false)
+  coversDependents            Boolean         @default(false)
+  maxDependents               Int?
+  isCore                      Boolean         @default(true)
+  isVoluntary                 Boolean         @default(false)
+  provider                    String?
+  annualCostPerEmployee       Float?
+  costCurrency                String          @default("EUR")
+  notes                       String?
+  createdAt                   DateTime        @default(now())
+  updatedAt                   DateTime        @updatedAt
+
+  @@index([companyId])
+  @@index([benefitCategory])
+  @@index([companyId, benefitCategory])
+}
+
+model PlatformInfo {
+  id                          String       @id @default(cuid())
+  companyId                   String
+  company                     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  usesPlatform                Boolean      @default(false)
+  platformName                String?
+  platformType                PlatformType?
+  annualPlatformFee           Float?
+  feeCurrency                 String       @default("EUR")
+  feeModel                    FeeModel?
+  platformSatisfactionScore   Int?         // 1-10
+  createdAt                   DateTime     @default(now())
+  updatedAt                   DateTime     @updatedAt
+
+  @@index([companyId])
+}
+
+model CountryConfig {
+  id                      String   @id @default(cuid())
+  countryCode             String   @unique // ISO 3166-1 alpha-2
+  countryName             String
+  currency                String
+  availableBenefitCategories BenefitCategory[]
+  regulatoryNotes         String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([countryCode])
+}
