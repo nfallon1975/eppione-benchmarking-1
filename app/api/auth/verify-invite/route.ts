@@ -2,29 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { encode } from "next-auth/jwt";
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const token = searchParams.get("token");
-  const email = searchParams.get("email");
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-
-  if (!token || !email) {
-    return NextResponse.redirect(`${baseUrl}/login?error=MissingParams`);
-  }
-
-  const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) {
-    return NextResponse.redirect(`${baseUrl}/login?error=Configuration`);
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    // Look up the verification token directly
+    const { token, email } = await req.json();
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+
+    if (!token || !email) {
+      return NextResponse.json({ error: "Missing token or email" }, { status: 400 });
+    }
+
+    const secret = process.env.NEXTAUTH_SECRET;
+    if (!secret) {
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    }
+
+    // Look up the verification token
     const stored = await prisma.verificationToken.findFirst({
       where: { identifier: email, token },
     });
 
     if (!stored) {
-      return NextResponse.redirect(`${baseUrl}/login?error=InvalidToken`);
+      return NextResponse.json({ error: "Invalid or expired invite link" }, { status: 400 });
     }
 
     // Delete the token (single use)
@@ -33,7 +31,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (stored.expires < new Date()) {
-      return NextResponse.redirect(`${baseUrl}/login?error=TokenExpired`);
+      return NextResponse.json({ error: "Invite link has expired" }, { status: 400 });
     }
 
     // Find the user
@@ -52,7 +50,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.redirect(`${baseUrl}/login?error=UserNotFound`);
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Create a NextAuth JWT token
@@ -75,12 +73,12 @@ export async function GET(req: NextRequest) {
       ? `${baseUrl}/set-password`
       : `${baseUrl}/dashboard`;
 
-    const response = NextResponse.redirect(redirectTo);
-
-    // Set the NextAuth session cookie
+    // Set the session cookie on the response
     const cookieName = baseUrl.startsWith("https")
       ? "__Secure-next-auth.session-token"
       : "next-auth.session-token";
+
+    const response = NextResponse.json({ redirectTo });
 
     response.cookies.set(cookieName, jwt, {
       httpOnly: true,
@@ -93,6 +91,6 @@ export async function GET(req: NextRequest) {
     return response;
   } catch (err) {
     console.error("verify-invite error:", err);
-    return NextResponse.redirect(`${baseUrl}/login?error=ServerError`);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

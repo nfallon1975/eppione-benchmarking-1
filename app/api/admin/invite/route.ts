@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     // Build the magic link URL using our custom verify endpoint
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const magicLink = `${baseUrl}/api/auth/verify-invite?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
+    const magicLink = `${baseUrl}/accept-invite?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
 
     await sendEmail({
       to: email,
