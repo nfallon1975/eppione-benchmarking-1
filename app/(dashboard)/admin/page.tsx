@@ -543,7 +543,8 @@ export default function AdminPage() {
         body: JSON.stringify({ email }),
       });
       if (res.ok) {
-        alert("Invite sent successfully");
+        const data = await res.json();
+        alert(`Invite sent (${data.version || "unknown"}, token: ${data.tokenPrefix || "?"})`);
       } else {
         const err = await res.json();
         alert(err.error || "Failed to send invite");
