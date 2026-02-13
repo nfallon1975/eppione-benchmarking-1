@@ -25,6 +25,7 @@ const benefitCategoryEnum = z.enum([
 
 const updateBenefitSchema = z.object({
   benefitCategory: benefitCategoryEnum.optional(),
+  country: z.string().optional(),
   benefitName: z.string().min(1).optional(),
   coverLevel: z.string().min(1).optional(),
   employerFunded: z.boolean().optional(),

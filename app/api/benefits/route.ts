@@ -26,6 +26,7 @@ const benefitCategoryEnum = z.enum([
 
 const createBenefitSchema = z.object({
   benefitCategory: benefitCategoryEnum,
+  country: z.string().optional(),
   benefitName: z.string().min(1),
   coverLevel: z.string().min(1),
   employerFunded: z.boolean().optional(),
@@ -164,8 +165,9 @@ export async function POST(req: NextRequest) {
       );
     }
     console.error("Error creating benefit:", error);
+    const message = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: message },
       { status: 500 }
     );
   }

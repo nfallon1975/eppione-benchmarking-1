@@ -80,6 +80,7 @@ interface BenefitEntry {
 
 const emptyForm = {
   benefitCategory: "",
+  country: "",
   benefitName: "",
   coverLevel: "",
   employerFunded: true,
@@ -127,6 +128,8 @@ export default function BenefitsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState(emptyForm);
+  const [error, setError] = useState<string | null>(null);
+  const [countries, setCountries] = useState<string[]>([]);
 
   async function fetchBenefits() {
     try {
@@ -144,17 +147,23 @@ export default function BenefitsPage() {
 
   useEffect(() => {
     fetchBenefits();
+    fetch("/api/company/countries")
+      .then((r) => r.json())
+      .then((d) => setCountries(d.countries || []))
+      .catch(() => {});
   }, []);
 
   function openNew() {
     setFormData(emptyForm);
     setEditingId(null);
+    setError(null);
     setDialogOpen(true);
   }
 
   function openEdit(benefit: BenefitEntry) {
     setFormData({
       benefitCategory: benefit.benefitCategory,
+      country: benefit.country || "",
       benefitName: benefit.benefitName,
       coverLevel: benefit.coverLevel,
       employerFunded: benefit.employerFunded,
@@ -203,9 +212,11 @@ export default function BenefitsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setError(null);
 
     const payload = {
       benefitCategory: formData.benefitCategory,
+      country: formData.country || undefined,
       benefitName: formData.benefitName,
       coverLevel: formData.coverLevel,
       employerFunded: formData.employerFunded,
@@ -298,10 +309,16 @@ export default function BenefitsPage() {
 
       if (res.ok) {
         setDialogOpen(false);
+        setError(null);
         fetchBenefits();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        const msg = data.error || data.details?.[0]?.message || `Save failed (${res.status})`;
+        setError(msg);
       }
     } catch (err) {
       console.error("Failed to save benefit:", err);
+      setError("Network error — could not reach server");
     } finally {
       setSaving(false);
     }
@@ -466,6 +483,31 @@ export default function BenefitsPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+            {countries.length > 1 && (
+              <div className="space-y-2">
+                <Label>Country</Label>
+                <Select
+                  value={formData.country}
+                  onValueChange={(v) => updateField("country", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Benefit Category</Label>
