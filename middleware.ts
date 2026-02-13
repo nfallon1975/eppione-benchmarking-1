@@ -11,6 +11,11 @@ export default withAuth(
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
+    // Broker routes require BROKER role
+    if (path.startsWith("/broker") && token?.role !== "BROKER") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+
     // Pending users can only access a limited set of pages
     if (
       token?.status === "PENDING" &&
@@ -43,8 +48,11 @@ export const config = {
     "/dashboard/:path*",
     "/company/:path*",
     "/benefits/:path*",
+    "/survey/:path*",
     "/benchmarking/:path*",
     "/admin/:path*",
+    "/broker/:path*",
+    "/data-explorer/:path*",
     "/pending",
     "/rejected",
   ],

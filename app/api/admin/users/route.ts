@@ -35,6 +35,7 @@ export async function GET() {
         name: true,
         role: true,
         status: true,
+        companyRole: true,
         createdAt: true,
         company: {
           select: {
@@ -43,6 +44,13 @@ export async function GET() {
             country: true,
             industry: true,
             employeeCount: true,
+          },
+        },
+        brokerProfile: {
+          select: {
+            companyName: true,
+            licenseNumber: true,
+            countriesActive: true,
           },
         },
       },

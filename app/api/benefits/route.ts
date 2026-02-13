@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { triggerComplianceCheckForCompany } from "@/lib/compliance";
 import { z } from "zod";
 
 const benefitCategoryEnum = z.enum([
@@ -38,6 +39,31 @@ const createBenefitSchema = z.object({
   annualCostPerEmployee: z.number().positive().nullable().optional(),
   costCurrency: z.string().min(1).optional(),
   notes: z.string().nullable().optional(),
+  healthExcess: z.number().nullable().optional(),
+  healthExcessCurrency: z.string().optional(),
+  healthCopayPercent: z.number().min(0).max(100).nullable().optional(),
+  healthInpatientLimit: z.number().nullable().optional(),
+  healthOutpatientLimit: z.number().nullable().optional(),
+  healthLimitCurrency: z.string().optional(),
+  lifeCoverMultiple: z.number().nullable().optional(),
+  lifeFixedCoverAmount: z.number().nullable().optional(),
+  lifeCoverAmountCurrency: z.string().optional(),
+  lifeFreeCoverLimit: z.number().nullable().optional(),
+  ipBenefitPercent: z.number().min(0).max(100).nullable().optional(),
+  ipWaitingPeriodWeeks: z.number().int().nullable().optional(),
+  ipMaxBenefitAge: z.number().int().nullable().optional(),
+  ciCoverMultiple: z.number().nullable().optional(),
+  ciFixedCoverAmount: z.number().nullable().optional(),
+  ciCoverAmountCurrency: z.string().optional(),
+  dentalAnnualLimit: z.number().nullable().optional(),
+  dentalAnnualLimitCurrency: z.string().optional(),
+  dentalOrthoIncluded: z.boolean().nullable().optional(),
+  pensionEmployerPct: z.number().min(0).max(100).nullable().optional(),
+  pensionEmployeePct: z.number().min(0).max(100).nullable().optional(),
+  brokerName: z.string().nullable().optional(),
+  brokerSatisfactionScore: z.number().int().min(1).max(10).nullable().optional(),
+  renewalDate: z.string().nullable().optional(),
+  benefitSatisfactionScore: z.number().int().min(1).max(10).nullable().optional(),
 });
 
 export async function GET() {
@@ -111,12 +137,23 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createBenefitSchema.parse(body);
 
+    const { renewalDate, ...restData } = data;
     const benefit = await prisma.benefitEntry.create({
       data: {
-        ...data,
+        ...restData,
+        renewalDate: renewalDate ? new Date(renewalDate) : null,
         companyId,
       },
     });
+
+    // Auto-run compliance check (fire-and-forget)
+    const company = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { country: true },
+    });
+    if (company) {
+      triggerComplianceCheckForCompany(companyId, company.country).catch(() => {});
+    }
 
     return NextResponse.json(benefit, { status: 201 });
   } catch (error) {

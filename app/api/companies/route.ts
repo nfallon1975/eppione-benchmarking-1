@@ -13,6 +13,10 @@ const updateCompanySchema = z.object({
   averageSalaryCurrency: z.string().min(1).nullable().optional(),
   averageBonus: z.number().positive().nullable().optional(),
   averageBonusCurrency: z.string().min(1).nullable().optional(),
+  benefitBudget: z.number().positive().nullable().optional(),
+  benefitBudgetCurrency: z.string().min(1).optional(),
+  averageWorkforceAge: z.number().positive().nullable().optional(),
+  desiredNewBenefits: z.string().nullable().optional(),
 });
 
 export async function GET() {
@@ -29,10 +33,24 @@ export async function GET() {
     const { companyId } = session.user;
 
     if (!companyId) {
-      return NextResponse.json(
-        { error: "No company associated with this account" },
-        { status: 404 }
-      );
+      // Return an empty shell so the company profile page can render the form
+      return NextResponse.json({
+        id: null,
+        name: "",
+        country: "",
+        industry: "",
+        employeeCount: 0,
+        averageSalary: null,
+        averageSalaryCurrency: null,
+        averageBonus: null,
+        averageBonusCurrency: null,
+        benefitBudget: null,
+        benefitBudgetCurrency: "EUR",
+        averageWorkforceAge: null,
+        desiredNewBenefits: null,
+        benefitEntries: [],
+        platformInfo: [],
+      });
     }
 
     const company = await prisma.company.findUnique({
@@ -71,17 +89,40 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const { companyId } = session.user;
-
-    if (!companyId) {
-      return NextResponse.json(
-        { error: "No company associated with this account" },
-        { status: 404 }
-      );
-    }
+    let { companyId } = session.user;
 
     const body = await req.json();
     const data = updateCompanySchema.parse(body);
+
+    // If user has no company yet, create one and link it
+    if (!companyId) {
+      if (!data.name || !data.country || !data.industry || !data.employeeCount) {
+        return NextResponse.json(
+          { error: "Name, country, industry and employee count are required to create a company profile" },
+          { status: 400 }
+        );
+      }
+
+      const company = await prisma.company.create({
+        data: {
+          name: data.name,
+          country: data.country,
+          industry: data.industry,
+          employeeCount: data.employeeCount,
+          averageSalary: data.averageSalary ?? null,
+          averageSalaryCurrency: data.averageSalaryCurrency ?? null,
+          averageBonus: data.averageBonus ?? null,
+          averageBonusCurrency: data.averageBonusCurrency ?? null,
+          benefitBudget: data.benefitBudget ?? null,
+          benefitBudgetCurrency: data.benefitBudgetCurrency ?? "EUR",
+          averageWorkforceAge: data.averageWorkforceAge ?? null,
+          desiredNewBenefits: data.desiredNewBenefits ?? null,
+          users: { connect: { id: session.user.id } },
+        },
+      });
+
+      return NextResponse.json(company);
+    }
 
     const company = await prisma.company.update({
       where: { id: companyId },

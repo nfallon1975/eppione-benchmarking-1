@@ -8,10 +8,19 @@ import {
   LayoutDashboard,
   Building2,
   Heart,
+  ClipboardList,
   BarChart3,
   Monitor,
   Shield,
+  Database,
   LogOut,
+  Users,
+  FileCheck,
+  ShieldCheck,
+  Settings,
+  Upload,
+  BookOpen,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -20,11 +29,31 @@ const clientNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/company", label: "Company Profile", icon: Building2 },
   { href: "/benefits", label: "Benefits", icon: Heart },
+  { href: "/survey", label: "Survey", icon: ClipboardList },
+  { href: "/survey/upload", label: "Upload Benefits", icon: Upload },
   { href: "/benchmarking", label: "Benchmarking", icon: BarChart3 },
+  { href: "/data-explorer", label: "Data Explorer", icon: Search },
+  { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
 const adminNavItems = [
   { href: "/admin", label: "Admin Panel", icon: Shield },
+  { href: "/admin/submissions", label: "Submissions", icon: ClipboardList },
+  { href: "/admin/benchmarks", label: "Benchmark Data", icon: Database },
+  { href: "/admin/reference-data", label: "Reference Data", icon: BookOpen },
+  { href: "/data-explorer", label: "Data Explorer", icon: Search },
+  { href: "/admin/upload", label: "Bulk Upload", icon: Upload },
+];
+
+const brokerNavItems = [
+  { href: "/broker/dashboard", label: "Broker Overview", icon: LayoutDashboard },
+  { href: "/broker/clients", label: "My Clients", icon: Users },
+  { href: "/broker/upload", label: "Upload Clients", icon: Upload },
+  { href: "/broker/submissions", label: "Submissions", icon: ClipboardList },
+  { href: "/broker/compliance", label: "Compliance Data", icon: FileCheck },
+  { href: "/broker/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/data-explorer", label: "Data Explorer", icon: Search },
 ];
 
 export function Sidebar() {
@@ -34,7 +63,9 @@ export function Sidebar() {
   const navItems =
     session?.user?.role === "ADMIN"
       ? [...clientNavItems, ...adminNavItems]
-      : clientNavItems;
+      : session?.user?.role === "BROKER"
+        ? [...brokerNavItems, ...clientNavItems]
+        : clientNavItems;
 
   return (
     <div className="flex h-full w-64 flex-col bg-eppione-navy">
@@ -48,7 +79,7 @@ export function Sidebar() {
         <p className="mt-1 text-xs text-white/70">Benefits Benchmarking</p>
       </div>
       <Separator className="bg-white/10" />
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 min-h-0 overflow-y-auto space-y-1 p-4">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (

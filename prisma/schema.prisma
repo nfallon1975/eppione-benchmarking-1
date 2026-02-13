@@ -10,12 +10,55 @@ datasource db {
 enum UserRole {
   ADMIN
   CLIENT
+  BROKER
+}
+
+enum RelationshipStatus {
+  UPLOADED
+  INVITED
+  ACTIVE
+  REVOKED
+}
+
+enum AccessLevel {
+  VIEW_ONLY
+  VIEW_AND_ADVISE
+}
+
+enum RequirementType {
+  MANDATORY
+  QUASI_MANDATORY
+  RECOMMENDED
+  COMMON_PRACTICE
+}
+
+enum LimitType {
+  TAX_RELIEF_CAP
+  CONTRIBUTION_LIMIT
+  INSURABLE_EARNINGS_CEILING
+  SOCIAL_SECURITY_CAP
+  BENEFIT_IN_KIND_THRESHOLD
+  OTHER
+}
+
+enum ComplianceStatus {
+  COMPLIANT
+  NON_COMPLIANT
+  PARTIALLY_COMPLIANT
+  NOT_APPLICABLE
+  UNKNOWN
 }
 
 enum UserStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum CompanyRole {
+  OWNER
+  CONTRIBUTOR
+  VIEWER
 }
 
 enum BenefitCategory {
@@ -54,20 +97,31 @@ enum FeeModel {
   OTHER
 }
 
+enum SurveyStatus {
+  DRAFT
+  SUBMITTED
+}
+
 model User {
-  id             String     @id @default(cuid())
-  email          String     @unique
+  id             String       @id @default(cuid())
+  email          String       @unique
   passwordHash   String?
   name           String?
-  role           UserRole   @default(CLIENT)
-  status         UserStatus @default(PENDING)
+  role           UserRole     @default(CLIENT)
+  status         UserStatus   @default(PENDING)
+  companyRole    CompanyRole?
   emailVerified  DateTime?
   companyId      String?
-  company        Company?   @relation(fields: [companyId], references: [id])
-  accounts       Account[]
-  sessions       Session[]
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  company        Company?     @relation(fields: [companyId], references: [id])
+  accounts                Account[]
+  sessions                Session[]
+  brokerProfile           BrokerProfile?
+  brokerClients           BrokerClientRelationship[] @relation("BrokerRelationships")
+  contributedRequirements CountryBenefitRequirement[]
+  contributedLimits       CountryStatutoryLimit[]
+  apiKeys                 ApiKey[]
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
 
   @@index([email])
   @@index([companyId])
@@ -117,15 +171,45 @@ model Company {
   averageSalaryCurrency String?
   averageBonus          Float?
   averageBonusCurrency  String?
+  financialYearEndMonth Int?            // 1-12
+  employeeCountRange    String?         // "1-50", "51-250", etc.
+  averageBonusPercent   Float?          // bonus as % of salary
+  surveyCompletedAt     DateTime?
+  benefitBudget         Float?
+  benefitBudgetCurrency String          @default("EUR")
+  averageWorkforceAge   Float?
+  desiredNewBenefits    String?
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
   users                 User[]
   benefitEntries        BenefitEntry[]
   platformInfo          PlatformInfo[]
+  surveyDraft           SurveyDraft?
+  categoryExclusions    CategoryExclusion[]
+  countryProfiles       CompanyCountryProfile[]
+  complianceResults     ComplianceCheckResult[]
+  brokerRelationships   BrokerClientRelationship[]
 
   @@index([country])
   @@index([industry])
+}
+
+model CompanyCountryProfile {
+  id                    String   @id @default(cuid())
+  companyId             String
+  company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  country               String   // ISO 3166-1 alpha-2
+  employeeCountRange    String?
+  averageSalary         Float?
+  averageSalaryCurrency String?
+  averageBonusPercent   Float?
+  financialYearEndMonth Int?     // 1-12
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([companyId, country])
+  @@index([companyId])
 }
 
 model BenefitEntry {
@@ -133,6 +217,7 @@ model BenefitEntry {
   companyId                   String
   company                     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   benefitCategory             BenefitCategory
+  country                     String          @default("")
   benefitName                 String
   coverLevel                  String          // e.g. "2x salary", "€50,000", "75% of salary"
   employerFunded              Boolean         @default(true)
@@ -142,16 +227,54 @@ model BenefitEntry {
   maxDependents               Int?
   isCore                      Boolean         @default(true)
   isVoluntary                 Boolean         @default(false)
+  isFlexible                  Boolean         @default(false)
+  flexFundAmount              Float?
+  flexFundCurrency            String?
+  surveySource                Boolean         @default(false)
   provider                    String?
   annualCostPerEmployee       Float?
   costCurrency                String          @default("EUR")
   notes                       String?
+  healthExcess                Float?
+  healthExcessCurrency        String          @default("EUR")
+  healthCopayPercent          Float?          // 0-100
+  healthInpatientLimit        Float?
+  healthOutpatientLimit       Float?
+  healthLimitCurrency         String          @default("EUR")
+  // Life Insurance / Death in Service
+  lifeCoverMultiple           Float?
+  lifeFixedCoverAmount        Float?
+  lifeCoverAmountCurrency     String          @default("EUR")
+  lifeFreeCoverLimit          Float?
+  // Income Protection
+  ipBenefitPercent            Float?
+  ipWaitingPeriodWeeks        Int?
+  ipMaxBenefitAge             Int?
+  // Critical Illness
+  ciCoverMultiple             Float?
+  ciFixedCoverAmount          Float?
+  ciCoverAmountCurrency       String          @default("EUR")
+  // Dental
+  dentalAnnualLimit           Float?
+  dentalAnnualLimitCurrency   String          @default("EUR")
+  dentalOrthoIncluded         Boolean?
+  // Pension
+  pensionEmployerPct          Float?
+  pensionEmployeePct          Float?
+  // Broker
+  brokerName                  String?
+  brokerSatisfactionScore     Int?            // 1-10
+  renewalDate                 DateTime?
+  benefitSatisfactionScore    Int?            // 1-10
+  complianceResults           ComplianceCheckResult[]
   createdAt                   DateTime        @default(now())
   updatedAt                   DateTime        @updatedAt
 
   @@index([companyId])
   @@index([benefitCategory])
   @@index([companyId, benefitCategory])
+  @@index([companyId, country])
+  @@index([companyId, country, benefitCategory])
 }
 
 model PlatformInfo {
@@ -165,9 +288,36 @@ model PlatformInfo {
   feeCurrency                 String       @default("EUR")
   feeModel                    FeeModel?
   platformSatisfactionScore   Int?         // 1-10
+  usesTotalRewardPlatform     Boolean      @default(false)
+  totalRewardPlatformName     String?
+  otherHRTechPlatforms        String?
   createdAt                   DateTime     @default(now())
   updatedAt                   DateTime     @updatedAt
 
+  @@index([companyId])
+}
+
+model SurveyDraft {
+  id          String       @id @default(cuid())
+  companyId   String       @unique
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status      SurveyStatus @default(DRAFT)
+  currentStep Int          @default(1)
+  data        Json
+  submittedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model CategoryExclusion {
+  id              String          @id @default(cuid())
+  companyId       String
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  benefitCategory BenefitCategory
+  country         String          @default("")
+  isCore          Boolean         // true=core step, false=flex step
+
+  @@unique([companyId, country, benefitCategory, isCore])
   @@index([companyId])
 }
 
@@ -182,4 +332,169 @@ model CountryConfig {
   updatedAt               DateTime @updatedAt
 
   @@index([countryCode])
+}
+
+model CurrencyRate {
+  id           String   @id @default(cuid())
+  fromCurrency String
+  toCurrency   String
+  rate         Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([fromCurrency, toCurrency])
+}
+
+model BrokerProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName     String
+  licenseNumber   String?
+  countriesActive String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model BrokerClientRelationship {
+  id          String             @id @default(cuid())
+  brokerId    String
+  broker      User               @relation("BrokerRelationships", fields: [brokerId], references: [id], onDelete: Cascade)
+  companyId   String?
+  company     Company?           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status      RelationshipStatus @default(INVITED)
+  invitedAt   DateTime           @default(now())
+  acceptedAt  DateTime?
+  inviteEmail String
+  inviteToken String             @unique
+  accessLevel AccessLevel        @default(VIEW_ONLY)
+  countries   String[]            // ISO 3166-1 alpha-2 codes; empty = all countries
+
+  @@unique([brokerId, companyId])
+  @@index([brokerId])
+  @@index([companyId])
+  @@index([inviteToken])
+}
+
+model CountryBenefitRequirement {
+  id                      String          @id @default(cuid())
+  country                 String
+  benefitCategory         BenefitCategory
+  requirementType         RequirementType
+  description             String
+  minimumLevel            String?
+  legalReference          String?
+  effectiveFrom           DateTime
+  effectiveTo             DateTime?
+  penaltyForNonCompliance String?
+  notes                   String?
+  contributedById         String
+  contributedBy           User            @relation(fields: [contributedById], references: [id])
+  verifiedByAdmin         Boolean         @default(false)
+  complianceResults       ComplianceCheckResult[]
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  @@index([country])
+  @@index([country, benefitCategory])
+  @@index([contributedById])
+}
+
+model CountryStatutoryLimit {
+  id              String          @id @default(cuid())
+  country         String
+  limitType       LimitType
+  benefitCategory BenefitCategory?
+  description     String
+  limitValue      String
+  currency        String?
+  taxYear         String
+  legalReference  String?
+  contributedById String
+  contributedBy   User            @relation(fields: [contributedById], references: [id])
+  verifiedByAdmin Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([country])
+  @@index([country, taxYear])
+  @@index([contributedById])
+}
+
+model ComplianceCheckResult {
+  id              String                    @id @default(cuid())
+  companyId       String
+  company         Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  country         String
+  benefitEntryId  String?
+  benefitEntry    BenefitEntry?             @relation(fields: [benefitEntryId], references: [id], onDelete: SetNull)
+  requirementId   String
+  requirement     CountryBenefitRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  status          ComplianceStatus
+  gap             String?
+  recommendation  String?
+  checkedAt       DateTime                  @default(now())
+
+  @@index([companyId])
+  @@index([companyId, country])
+  @@index([requirementId])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  keyHash    String    @unique
+  keyPrefix  String
+  scopes     String[]
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([keyPrefix])
+}
+
+model ReferenceBenchmark {
+  id                        String          @id @default(cuid())
+  country                   String          // ISO 3166-1 alpha-2
+  benefitCategory           BenefitCategory
+  prevalencePercent         Float           // 0-100
+  costAvg                   Float?
+  costMedian                Float?
+  costP25                   Float?
+  costP75                   Float?
+  costCurrency              String          @default("EUR")
+  typicalEmployerContribPct Float?
+  typicalEmployeeContribPct Float?
+  pctEmployerFunded         Float?          // 0-100
+  pctCoversSpouse           Float?          // 0-100
+  pctCoversDependents       Float?          // 0-100
+  // Health-specific
+  healthExcess              Float?
+  healthCopayPercent        Float?
+  healthInpatientLimit      Float?
+  healthOutpatientLimit     Float?
+  // Life-specific
+  lifeCoverMultiple         Float?
+  // Income Protection-specific
+  ipBenefitPercent          Float?
+  ipWaitingPeriodWeeks      Int?
+  // Pension-specific
+  pensionEmployerPct        Float?
+  pensionEmployeePct        Float?
+  // Metadata
+  coverageNotes             String?         @db.Text
+  sourceDescription         String?         @db.Text
+  sourceUrls                String[]
+  generatedAt               DateTime        @default(now())
+  verifiedByAdmin           Boolean         @default(false)
+  publishedAt               DateTime?
+  lastReviewedAt            DateTime?
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+
+  @@unique([country, benefitCategory])
+  @@index([country])
 }

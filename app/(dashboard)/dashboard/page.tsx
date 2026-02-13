@@ -25,6 +25,7 @@ import {
   COUNTRY_LABELS,
   formatCurrency,
 } from "@/lib/utils";
+import { BenefitHealthScoreCard } from "@/components/dashboard/benefit-health-score-card";
 
 interface CompanyData {
   id: string;
@@ -179,6 +180,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
+
+          {benefitCount > 0 && <BenefitHealthScoreCard />}
 
           <div className="grid gap-6 md:grid-cols-2">
             <Card>

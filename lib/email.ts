@@ -75,3 +75,72 @@ export async function notifyUserRejected(user: {
     ].join("\n"),
   });
 }
+
+export async function notifyBrokerCreated(user: {
+  name: string;
+  email: string;
+  companyName: string;
+}) {
+  await sendEmail({
+    to: user.email,
+    subject: "You've been invited to Eppione Benchmarking",
+    body: [
+      `Hi ${user.name},`,
+      ``,
+      `An admin has created a broker account for you on Eppione Benchmarking.`,
+      ``,
+      `Firm: ${user.companyName}`,
+      ``,
+      `You can sign in via the login page to get started:`,
+      `${process.env.NEXTAUTH_URL}/login`,
+      ``,
+      `— The Eppione Team`,
+    ].join("\n"),
+  });
+}
+
+export async function notifyBrokerInvite(params: {
+  clientEmail: string;
+  brokerName: string;
+  brokerFirm: string;
+  inviteToken: string;
+}) {
+  const inviteUrl = `${process.env.NEXTAUTH_URL}/register?invite=${params.inviteToken}`;
+  await sendEmail({
+    to: params.clientEmail,
+    subject: `${params.brokerFirm} has invited you to Eppione Benchmarking`,
+    body: [
+      `Hi,`,
+      ``,
+      `${params.brokerName} from ${params.brokerFirm} has invited you to join Eppione Benchmarking.`,
+      ``,
+      `Eppione helps companies benchmark their employee benefits across countries and industries.`,
+      ``,
+      `Register here: ${inviteUrl}`,
+      ``,
+      `— The Eppione Team`,
+    ].join("\n"),
+  });
+}
+
+export async function notifyBrokerClientAccepted(params: {
+  brokerEmail: string;
+  clientName: string;
+  clientCompanyName: string;
+}) {
+  await sendEmail({
+    to: params.brokerEmail,
+    subject: "A client has accepted your invite — Eppione Benchmarking",
+    body: [
+      `Hi,`,
+      ``,
+      `${params.clientName} from ${params.clientCompanyName} has accepted your invitation and joined Eppione Benchmarking.`,
+      ``,
+      `You can now view their benchmarking data from your broker dashboard.`,
+      ``,
+      `Dashboard: ${process.env.NEXTAUTH_URL}/broker/clients`,
+      ``,
+      `— The Eppione Team`,
+    ].join("\n"),
+  });
+}

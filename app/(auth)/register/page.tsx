@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,14 +21,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Monitor } from "lucide-react";
-import { NACE_INDUSTRIES, COUNTRY_LABELS } from "@/lib/utils";
+import { NACE_INDUSTRIES } from "@/lib/utils";
+import { CountryPicker, MultiCountryPicker } from "@/components/ui/country-picker";
+
+type RegistrationRole = "CLIENT" | "BROKER";
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-sm text-slate-500">Loading...</div>
+      </div>
+    }>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [role, setRole] = useState<RegistrationRole>("CLIENT");
+  const [inviteBrokerName, setInviteBrokerName] = useState<string | null>(null);
 
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -36,7 +59,29 @@ export default function RegisterPage() {
     country: "",
     industry: "",
     employeeCount: "",
+    // Broker fields
+    licenseNumber: "",
+    countriesActive: [] as string[],
   });
+
+  useEffect(() => {
+    if (inviteToken) {
+      // Force CLIENT role when invite token present
+      setRole("CLIENT");
+      // Fetch invite details
+      fetch(`/api/broker/invite-info?token=${inviteToken}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) {
+            setInviteBrokerName(data.brokerName);
+            if (data.inviteEmail) {
+              setFormData((prev) => ({ ...prev, email: data.inviteEmail }));
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [inviteToken]);
 
   function updateField(field: string, value: string) {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -48,13 +93,35 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      const payload: Record<string, unknown> =
+        role === "BROKER"
+          ? {
+              role: "BROKER",
+              name: formData.name,
+              email: formData.email,
+              password: formData.password,
+              companyName: formData.companyName,
+              licenseNumber: formData.licenseNumber || undefined,
+              countriesActive: formData.countriesActive,
+              acceptedTerms: true,
+            }
+          : {
+              role: "CLIENT",
+              name: formData.name,
+              email: formData.email,
+              password: formData.password,
+              companyName: formData.companyName,
+              country: formData.country,
+              industry: formData.industry,
+              employeeCount: parseInt(formData.employeeCount),
+              acceptedTerms: true,
+              ...(inviteToken ? { inviteToken } : {}),
+            };
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          employeeCount: parseInt(formData.employeeCount),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -109,7 +176,7 @@ export default function RegisterPage() {
           Join leading companies benchmarking their employee benefits.
         </p>
         <p className="mt-2 text-sm text-white/60">
-          Get started in minutes. Compare across 11 countries and 20+ industries.
+          Get started in minutes. Compare across 200+ countries and 20+ industries.
         </p>
       </div>
 
@@ -128,13 +195,49 @@ export default function RegisterPage() {
             <CardHeader>
               <CardTitle>Create Account</CardTitle>
               <CardDescription>
-                Register to start benchmarking your benefits
+                {role === "BROKER"
+                  ? "Register as a benefits broker"
+                  : "Register to start benchmarking your benefits"}
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {inviteBrokerName && (
+                <div className="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-700">
+                  Invited by <strong>{inviteBrokerName}</strong>
+                </div>
+              )}
+
               {error && (
                 <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
                   {error}
+                </div>
+              )}
+
+              {/* Role toggle - hidden when invite token present */}
+              {!inviteToken && (
+                <div className="mb-6 flex rounded-lg border p-1">
+                  <button
+                    type="button"
+                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      role === "CLIENT"
+                        ? "bg-eppione-navy text-white"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    onClick={() => setRole("CLIENT")}
+                  >
+                    Register as a Company
+                  </button>
+                  <button
+                    type="button"
+                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      role === "BROKER"
+                        ? "bg-eppione-navy text-white"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    onClick={() => setRole("BROKER")}
+                  >
+                    Register as a Broker
+                  </button>
                 </div>
               )}
 
@@ -175,7 +278,9 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="companyName">Company Name</Label>
+                  <Label htmlFor="companyName">
+                    {role === "BROKER" ? "Broker Firm Name" : "Company Name"}
+                  </Label>
                   <Input
                     id="companyName"
                     value={formData.companyName}
@@ -184,57 +289,107 @@ export default function RegisterPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Country</Label>
-                  <Select
-                    value={formData.country}
-                    onValueChange={(v) => updateField("country", v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(COUNTRY_LABELS).map(([code, name]) => (
-                        <SelectItem key={code} value={code}>
-                          {name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Client-specific fields */}
+                {role === "CLIENT" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Country</Label>
+                      <CountryPicker
+                        value={formData.country}
+                        onChange={(v) => updateField("country", v)}
+                        placeholder="Search for your country..."
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label>Industry (NACE)</Label>
-                  <Select
-                    value={formData.industry}
-                    onValueChange={(v) => updateField("industry", v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select industry" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(NACE_INDUSTRIES).map(([code, name]) => (
-                        <SelectItem key={code} value={code}>
-                          {code} - {name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-2">
+                      <Label>Industry (NACE)</Label>
+                      <Select
+                        value={formData.industry}
+                        onValueChange={(v) => updateField("industry", v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select industry" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(NACE_INDUSTRIES).map(([code, name]) => (
+                            <SelectItem key={code} value={code}>
+                              {code} - {name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="employeeCount">Number of Employees</Label>
-                  <Input
-                    id="employeeCount"
-                    type="number"
-                    min={1}
-                    value={formData.employeeCount}
-                    onChange={(e) => updateField("employeeCount", e.target.value)}
-                    required
+                    <div className="space-y-2">
+                      <Label htmlFor="employeeCount">Number of Employees</Label>
+                      <Input
+                        id="employeeCount"
+                        type="number"
+                        min={1}
+                        value={formData.employeeCount}
+                        onChange={(e) => updateField("employeeCount", e.target.value)}
+                        required
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Broker-specific fields */}
+                {role === "BROKER" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="licenseNumber">License Number (Optional)</Label>
+                      <Input
+                        id="licenseNumber"
+                        value={formData.licenseNumber}
+                        onChange={(e) => updateField("licenseNumber", e.target.value)}
+                        placeholder="e.g. FCA 123456"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Countries Active</Label>
+                      <p className="text-xs text-slate-500">
+                        Select the countries where you advise clients
+                      </p>
+                      <MultiCountryPicker
+                        value={formData.countriesActive}
+                        onChange={(codes) =>
+                          setFormData((prev) => ({ ...prev, countriesActive: codes }))
+                        }
+                        placeholder="Search and add countries..."
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="acceptedTerms"
+                    checked={acceptedTerms}
+                    onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
                   />
+                  <label htmlFor="acceptedTerms" className="text-sm leading-tight text-slate-600">
+                    I agree to the{" "}
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      className="font-medium text-eppione-cyan hover:underline"
+                    >
+                      Terms of Use
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      href="/privacy"
+                      target="_blank"
+                      className="font-medium text-eppione-cyan hover:underline"
+                    >
+                      Privacy Notice
+                    </Link>
+                  </label>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading || !acceptedTerms}>
                   {loading ? "Creating Account..." : "Create Account"}
                 </Button>
               </form>

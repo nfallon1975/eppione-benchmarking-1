@@ -2,45 +2,42 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { BenefitCategory } from "@prisma/client";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  HEALTH: "Health Insurance",
-  LIFE: "Life Insurance / Death in Service",
-  DISABILITY: "Disability Insurance",
-  PENSION: "Pension / Retirement",
-  DENTAL: "Dental Insurance",
-  VISION: "Vision / Optical",
-  EAP: "Employee Assistance Programme",
-  WELLNESS: "Wellness / Wellbeing",
-  INCOME_PROTECTION: "Income Protection",
-  CRITICAL_ILLNESS: "Critical Illness Cover",
-  TRAVEL: "Travel Insurance",
-  MEAL_VOUCHERS: "Meal Vouchers / Allowance",
-  TRANSPORT: "Transport / Commuter Benefits",
-  CHILDCARE: "Childcare Benefits",
-  EDUCATION: "Education / Training",
-  OTHER: "Other Benefits",
-};
+import { loadCurrencyRates } from "@/lib/currency";
+import {
+  calculateCategoryBenchmarks,
+  calculatePlatformBenchmarks,
+  calculateCompanyPosition,
+  filterCompanyIds,
+  ANONYMITY_MINIMUM,
+} from "@/lib/benchmarking";
+import type {
+  BenchmarkFilters,
+  BenchmarkGrouping,
+  BenchmarkResult,
+  DataQuality,
+  PlatformData,
+} from "@/lib/benchmarking-types";
+import { prismaEntryToCompanyBenefitData } from "@/lib/benefit-data-mapping";
+import { buildReferenceCategories } from "@/lib/reference-benchmarking";
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const country = searchParams.get("country");
     let industry = searchParams.get("industry");
-    const benefitCategory = searchParams.get("benefitCategory");
+    const sizeBand = searchParams.get("sizeBand");
+    const grouping = (searchParams.get("grouping") || "country_industry") as BenchmarkGrouping;
+    const currency = searchParams.get("currency");
 
     // CLIENT users are locked to their company's industry
+    let userCompanyId: string | null = null;
     if (session.user.role === "CLIENT" && session.user.companyId) {
+      userCompanyId = session.user.companyId;
       const company = await prisma.company.findUnique({
         where: { id: session.user.companyId },
         select: { industry: true },
@@ -51,193 +48,329 @@ export async function GET(req: NextRequest) {
     }
 
     if (!country) {
+      return NextResponse.json({ error: "Country parameter is required" }, { status: 400 });
+    }
+
+    // Determine target currency (default to country's currency)
+    let targetCurrency = currency || "EUR";
+    if (!currency) {
+      const countryConfig = await prisma.countryConfig.findUnique({
+        where: { countryCode: country },
+        select: { currency: true },
+      });
+      if (countryConfig) targetCurrency = countryConfig.currency;
+    }
+
+    const rates = await loadCurrencyRates();
+
+    // Only include companies from APPROVED users
+    const approvedUsers = await prisma.user.findMany({
+      where: { status: "APPROVED", companyId: { not: null } },
+      select: { companyId: true },
+    });
+    const approvedCompanyIds = new Set(
+      approvedUsers.map((u) => u.companyId).filter((id): id is string => id !== null)
+    );
+
+    if (approvedCompanyIds.size === 0) {
+      // No approved companies at all — try reference data before returning empty
+      const referenceCategories = await buildReferenceCategories(country, targetCurrency, rates);
+      if (referenceCategories.length > 0) {
+        const refResult: BenchmarkResult = {
+          country,
+          industry: industry || null,
+          sizeBand: sizeBand || null,
+          grouping,
+          targetCurrency,
+          totalCompanies: 0,
+          avgEmployeeCount: 0,
+          avgSalary: null,
+          categories: referenceCategories,
+          companyPosition: null,
+          platform: {
+            adoptionRate: 0,
+            totalCompanies: 0,
+            meetsMinimum: false,
+            avgFee: null,
+            satisfactionStats: null,
+            platformTypes: [],
+            feeModels: [],
+          },
+          dataAsOf: new Date().toISOString(),
+          dataQuality: "reference",
+          dataQualityMessage:
+            "Reference benchmarks based on published market data. As more companies join, you\u2019ll see live peer benchmarks.",
+        };
+        return NextResponse.json(refResult);
+      }
+      return NextResponse.json(emptyResult(country, industry, sizeBand, grouping, targetCurrency));
+    }
+
+    // Get all companies that have completed the survey
+    const allCompanies = await prisma.company.findMany({
+      where: {
+        id: { in: Array.from(approvedCompanyIds) },
+        surveyCompletedAt: { not: null },
+      },
+      select: {
+        id: true,
+        country: true,
+        industry: true,
+        employeeCount: true,
+        employeeCountRange: true,
+        averageSalary: true,
+        averageSalaryCurrency: true,
+        surveyCompletedAt: true,
+      },
+    });
+
+    // Also include companies that have benefits in the target country via BenefitEntry.country
+    // (multi-country companies)
+    const companiesWithBenefitsInCountry = await prisma.benefitEntry.findMany({
+      where: {
+        companyId: { in: Array.from(approvedCompanyIds) },
+        country: country,
+      },
+      select: { companyId: true },
+      distinct: ["companyId"],
+    });
+    const countryBenefitCompanyIds = new Set(companiesWithBenefitsInCountry.map((b) => b.companyId));
+
+    // Build the filter
+    const filters: BenchmarkFilters = {
+      country,
+      industry: industry || undefined,
+      sizeBand: sizeBand || undefined,
+    };
+
+    // For filtering: include companies that are either in the target country or have benefits there
+    const companiesInScope = allCompanies.filter(
+      (c) => c.country === country || countryBenefitCompanyIds.has(c.id)
+    );
+
+    const scopeForFilter = companiesInScope.map((c) => ({
+      ...c,
+      // For multi-country companies, treat them as being in the country where they have benefits
+      country: countryBenefitCompanyIds.has(c.id) ? country : c.country,
+    }));
+
+    let matchingIds = filterCompanyIds(scopeForFilter, filters, grouping);
+    let dataQuality: DataQuality = "industry";
+    let dataQualityMessage = "";
+    let effectiveGrouping = grouping;
+
+    // --- Three-tier fallback ---
+
+    // Tier 1 → Tier 2: If not enough industry peers, try cross-industry
+    if (
+      matchingIds.size < ANONYMITY_MINIMUM &&
+      effectiveGrouping === "country_industry" &&
+      filters.industry &&
+      filters.industry !== "all"
+    ) {
+      const crossFilters: BenchmarkFilters = {
+        country,
+        industry: undefined,
+        sizeBand: filters.sizeBand,
+      };
+      const crossIds = filterCompanyIds(scopeForFilter, crossFilters, "country_only");
+      if (crossIds.size >= ANONYMITY_MINIMUM) {
+        matchingIds = crossIds;
+        dataQuality = "cross_industry";
+        effectiveGrouping = "country_only";
+      }
+    }
+
+    // Tier 2 → Tier 3: If still not enough, try reference data
+    if (matchingIds.size < ANONYMITY_MINIMUM) {
+      const referenceCategories = await buildReferenceCategories(
+        country,
+        targetCurrency,
+        rates
+      );
+      if (referenceCategories.length > 0) {
+        const refResult: BenchmarkResult = {
+          country,
+          industry: industry || null,
+          sizeBand: sizeBand || null,
+          grouping: effectiveGrouping,
+          targetCurrency,
+          totalCompanies: 0,
+          avgEmployeeCount: 0,
+          avgSalary: null,
+          categories: referenceCategories,
+          companyPosition: null,
+          platform: {
+            adoptionRate: 0,
+            totalCompanies: 0,
+            meetsMinimum: false,
+            avgFee: null,
+            satisfactionStats: null,
+            platformTypes: [],
+            feeModels: [],
+          },
+          dataAsOf: new Date().toISOString(),
+          dataQuality: "reference",
+          dataQualityMessage:
+            "Reference benchmarks based on published market data. As more companies join, you\u2019ll see live peer benchmarks.",
+        };
+        return NextResponse.json(refResult);
+      }
+
+      // No reference data either — return empty
       return NextResponse.json(
-        { error: "Country parameter is required" },
-        { status: 400 }
+        emptyResult(country, industry, sizeBand, grouping, targetCurrency)
       );
     }
 
-    // Only include companies from APPROVED users
-    const approvedCompanyIds = await prisma.user.findMany({
-      where: { status: "APPROVED" },
-      select: { companyId: true },
-    });
+    // --- We have enough companies, proceed with real data ---
 
-    const companyIds = approvedCompanyIds
-      .map((u) => u.companyId)
-      .filter((id): id is string => id !== null);
+    const matchingCompanies = companiesInScope.filter((c) => matchingIds.has(c.id));
+    const totalCompanies = matchingCompanies.length;
 
-    const emptyResponse = {
-      country,
-      industry: industry || null,
-      totalCompanies: 0,
-      avgEmployeeCount: 0,
-      avgSalary: null,
-      categories: [],
-    };
-
-    if (companyIds.length === 0) {
-      return NextResponse.json(emptyResponse);
+    if (dataQuality === "industry") {
+      dataQualityMessage = `Industry-specific benchmarks from ${totalCompanies} peer companies`;
+    } else {
+      dataQualityMessage = `Limited industry data \u2014 showing cross-industry benchmarks from ${totalCompanies} companies`;
     }
 
-    // Build company filter
-    const companyWhere: Record<string, unknown> = {
-      id: { in: companyIds },
-      country,
-    };
+    // Avg employee count
+    const totalEmployees = matchingCompanies.reduce((sum, c) => sum + c.employeeCount, 0);
+    const avgEmployeeCount = Math.round(totalEmployees / totalCompanies);
 
-    if (industry && industry !== "all") {
-      companyWhere.industry = industry;
+    // Avg salary (converted to target currency)
+    const companiesWithSalary = matchingCompanies.filter((c) => c.averageSalary !== null);
+    let avgSalary: number | null = null;
+    if (companiesWithSalary.length > 0) {
+      const totalSalary = companiesWithSalary.reduce((sum, c) => {
+        const salCurrency = c.averageSalaryCurrency || "EUR";
+        return sum + (c.averageSalary ? convertAmount(c.averageSalary, salCurrency, targetCurrency, rates) : 0);
+      }, 0);
+      avgSalary = Math.round(totalSalary / companiesWithSalary.length);
     }
 
-    const companies = await prisma.company.findMany({
-      where: companyWhere,
-      select: {
-        id: true,
-        employeeCount: true,
-        averageSalary: true,
-      },
-    });
-
-    const matchingCompanyIds = companies.map((c) => c.id);
-
-    if (matchingCompanyIds.length === 0) {
-      return NextResponse.json(emptyResponse);
-    }
-
-    const totalEmployees = companies.reduce(
-      (sum, c) => sum + c.employeeCount,
-      0
-    );
-    const avgEmployeeCount = Math.round(totalEmployees / companies.length);
-
-    const companiesWithSalary = companies.filter(
-      (c) => c.averageSalary !== null
-    );
-    const avgSalary =
-      companiesWithSalary.length > 0
-        ? Math.round(
-            companiesWithSalary.reduce(
-              (sum, c) => sum + (c.averageSalary ?? 0),
-              0
-            ) / companiesWithSalary.length
-          )
-        : null;
-
-    // Build benefit entry filter
-    const benefitWhere: Record<string, unknown> = {
-      companyId: { in: matchingCompanyIds },
-    };
-
-    if (benefitCategory) {
-      benefitWhere.benefitCategory = benefitCategory as BenefitCategory;
-    }
-
+    // Fetch benefit entries — filter by country on the BenefitEntry itself
+    // Legacy data has country="" so fall back to Company.country
     const benefitEntries = await prisma.benefitEntry.findMany({
-      where: benefitWhere,
-      select: {
-        benefitCategory: true,
-        companyId: true,
-        annualCostPerEmployee: true,
-        employerFunded: true,
-        coversSpouse: true,
-        coversDependents: true,
+      where: {
+        companyId: { in: Array.from(matchingIds) },
+      },
+      include: {
+        company: { select: { country: true } },
       },
     });
 
-    // Aggregate by benefit category
-    const categoryMap = new Map<
-      string,
-      {
-        companyIds: Set<string>;
-        costs: number[];
-        employerFundedCount: number;
-        coversSpouseCount: number;
-        coversDependentsCount: number;
-        totalEntries: number;
-      }
-    >();
+    // Filter: entry.country matches OR (entry.country == "" AND company.country matches)
+    const filteredBenefits = benefitEntries
+      .filter((e) => {
+        const entryCountry = e.country || e.company.country;
+        return entryCountry === country;
+      })
+      .map((e) => prismaEntryToCompanyBenefitData(e));
 
-    for (const entry of benefitEntries) {
-      const cat = entry.benefitCategory;
-      if (!categoryMap.has(cat)) {
-        categoryMap.set(cat, {
-          companyIds: new Set(),
-          costs: [],
-          employerFundedCount: 0,
-          coversSpouseCount: 0,
-          coversDependentsCount: 0,
-          totalEntries: 0,
-        });
-      }
-
-      const agg = categoryMap.get(cat)!;
-      agg.companyIds.add(entry.companyId);
-      agg.totalEntries++;
-
-      if (entry.annualCostPerEmployee !== null) {
-        agg.costs.push(entry.annualCostPerEmployee);
-      }
-      if (entry.employerFunded) agg.employerFundedCount++;
-      if (entry.coversSpouse) agg.coversSpouseCount++;
-      if (entry.coversDependents) agg.coversDependentsCount++;
-    }
-
-    const categories = Array.from(categoryMap.entries()).map(
-      ([category, agg]) => {
-        const avgCost =
-          agg.costs.length > 0
-            ? Math.round(
-                agg.costs.reduce((a, b) => a + b, 0) / agg.costs.length
-              )
-            : 0;
-        const minCost =
-          agg.costs.length > 0 ? Math.min(...agg.costs) : 0;
-        const maxCost =
-          agg.costs.length > 0 ? Math.max(...agg.costs) : 0;
-
-        return {
-          category,
-          categoryLabel: CATEGORY_LABELS[category] ?? category,
-          companyCount: agg.companyIds.size,
-          avgCostPerEmployee: avgCost,
-          minCost,
-          maxCost,
-          pctEmployerFunded:
-            agg.totalEntries > 0
-              ? Math.round(
-                  (agg.employerFundedCount / agg.totalEntries) * 100
-                )
-              : 0,
-          pctCoversSpouse:
-            agg.totalEntries > 0
-              ? Math.round(
-                  (agg.coversSpouseCount / agg.totalEntries) * 100
-                )
-              : 0,
-          pctCoversDependents:
-            agg.totalEntries > 0
-              ? Math.round(
-                  (agg.coversDependentsCount / agg.totalEntries) * 100
-                )
-              : 0,
-        };
-      }
+    // Category benchmarks
+    const categories = calculateCategoryBenchmarks(
+      filteredBenefits,
+      totalCompanies,
+      targetCurrency,
+      rates
     );
 
-    return NextResponse.json({
+    // Platform benchmarks
+    const platformEntries = await prisma.platformInfo.findMany({
+      where: { companyId: { in: Array.from(matchingIds) } },
+    });
+    const platformData: PlatformData[] = platformEntries.map((p) => ({
+      companyId: p.companyId,
+      usesPlatform: p.usesPlatform,
+      platformType: p.platformType,
+      annualPlatformFee: p.annualPlatformFee,
+      feeCurrency: p.feeCurrency,
+      feeModel: p.feeModel,
+      platformSatisfactionScore: p.platformSatisfactionScore,
+    }));
+    const platform = calculatePlatformBenchmarks(platformData, targetCurrency, rates);
+
+    // Company position (for CLIENT users)
+    let companyPosition = null;
+    if (userCompanyId && matchingIds.has(userCompanyId)) {
+      const myBenefits = filteredBenefits.filter((b) => b.companyId === userCompanyId);
+      companyPosition = calculateCompanyPosition(myBenefits, categories, targetCurrency, rates);
+    }
+
+    // Data as of
+    const latestDate = matchingCompanies.reduce((latest, c) => {
+      if (c.surveyCompletedAt && (!latest || c.surveyCompletedAt > latest)) {
+        return c.surveyCompletedAt;
+      }
+      return latest;
+    }, null as Date | null);
+
+    const result: BenchmarkResult = {
       country,
       industry: industry || null,
-      totalCompanies: matchingCompanyIds.length,
+      sizeBand: sizeBand || null,
+      grouping: effectiveGrouping,
+      targetCurrency,
+      totalCompanies,
       avgEmployeeCount,
       avgSalary,
       categories,
-    });
+      companyPosition,
+      platform,
+      dataAsOf: latestDate?.toISOString() || new Date().toISOString(),
+      dataQuality,
+      dataQualityMessage,
+    };
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching benchmarking data:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
+}
+
+function convertAmount(
+  amount: number,
+  fromCurrency: string,
+  toCurrency: string,
+  rates: Record<string, number>
+): number {
+  if (fromCurrency === toCurrency) return amount;
+  const key = `${fromCurrency}_${toCurrency}`;
+  if (rates[key]) return amount * rates[key];
+  const inverseKey = `${toCurrency}_${fromCurrency}`;
+  if (rates[inverseKey]) return amount / rates[inverseKey];
+  return amount;
+}
+
+function emptyResult(
+  country: string,
+  industry: string | null,
+  sizeBand: string | null,
+  grouping: BenchmarkGrouping,
+  targetCurrency: string
+): BenchmarkResult {
+  return {
+    country,
+    industry: industry || null,
+    sizeBand: sizeBand || null,
+    grouping,
+    targetCurrency,
+    totalCompanies: 0,
+    avgEmployeeCount: 0,
+    avgSalary: null,
+    categories: [],
+    companyPosition: null,
+    platform: {
+      adoptionRate: 0,
+      totalCompanies: 0,
+      meetsMinimum: false,
+      avgFee: null,
+      satisfactionStats: null,
+      platformTypes: [],
+      feeModels: [],
+    },
+    dataAsOf: new Date().toISOString(),
+  };
 }

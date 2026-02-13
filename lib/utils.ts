@@ -77,19 +77,8 @@ export const BENEFIT_CATEGORY_LABELS: Record<string, string> = {
   OTHER: "Other Benefits",
 };
 
-export const COUNTRY_LABELS: Record<string, string> = {
-  IE: "Ireland",
-  GB: "United Kingdom",
-  FR: "France",
-  ES: "Spain",
-  PT: "Portugal",
-  US: "United States",
-  DE: "Germany",
-  NL: "Netherlands",
-  AE: "United Arab Emirates",
-  SG: "Singapore",
-  AU: "Australia",
-};
+// Re-export the full country list as COUNTRY_LABELS for backward compatibility
+export { ALL_COUNTRY_LABELS as COUNTRY_LABELS } from "@/lib/countries";
 
 export const PLATFORM_TYPE_LABELS: Record<string, string> = {
   FLEX_BENEFITS: "Flexible Benefits Platform",
@@ -108,11 +97,80 @@ export const FEE_MODEL_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
+export const NACE_SECTIONS: Record<string, string> = {
+  A: "Agriculture, Forestry and Fishing",
+  B: "Mining and Quarrying",
+  C: "Manufacturing",
+  D: "Electricity, Gas, Steam and Air Conditioning Supply",
+  E: "Water Supply; Sewerage, Waste Management",
+  F: "Construction",
+  G: "Wholesale and Retail Trade",
+  H: "Transportation and Storage",
+  I: "Accommodation and Food Service",
+  J: "Information and Communication",
+  K: "Financial and Insurance Activities",
+  L: "Real Estate Activities",
+  M: "Professional, Scientific and Technical Activities",
+  N: "Administrative and Support Service Activities",
+  O: "Public Administration and Defence",
+  P: "Education",
+  Q: "Human Health and Social Work Activities",
+  R: "Arts, Entertainment and Recreation",
+  S: "Other Service Activities",
+};
+
+export const MONTH_LABELS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+export const EMPLOYEE_COUNT_RANGES = [
+  "1-50",
+  "51-250",
+  "251-1000",
+  "1001-5000",
+  "5000+",
+];
+
 export function formatCurrency(amount: number, currency: string): string {
+  const code = currency && currency.length === 3 ? currency : "EUR";
   return new Intl.NumberFormat("en-IE", {
     style: "currency",
-    currency,
+    currency: code,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+/**
+ * Return a Tailwind color class based on percentile rank.
+ * Low cost = green (good), high cost = red (expensive).
+ */
+export function getPercentileColor(rank: number | null): string {
+  if (rank === null) return "text-slate-500";
+  if (rank <= 25) return "text-green-600";
+  if (rank <= 50) return "text-green-500";
+  if (rank <= 75) return "text-amber-500";
+  return "text-red-500";
+}
+
+/**
+ * Return a background Tailwind class based on percentile rank.
+ */
+export function getPercentileBgColor(rank: number | null): string {
+  if (rank === null) return "bg-slate-100";
+  if (rank <= 25) return "bg-green-50";
+  if (rank <= 50) return "bg-green-50/50";
+  if (rank <= 75) return "bg-amber-50";
+  return "bg-red-50";
 }
