@@ -65,10 +65,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Build the magic link URL (NextAuth email callback format)
+    // Build the magic link URL using our custom verify endpoint
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const callbackUrl = `${baseUrl}/dashboard`;
-    const magicLink = `${baseUrl}/api/auth/callback/email?callbackUrl=${encodeURIComponent(callbackUrl)}&token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
+    const magicLink = `${baseUrl}/api/auth/verify-invite?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
 
     await sendEmail({
       to: email,
