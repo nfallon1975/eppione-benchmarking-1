@@ -244,7 +244,7 @@ Return ONLY a JSON array of objects, no markdown fencing, no explanation before 
 
   const message = await client.messages.create({
     model: "claude-sonnet-4-5-20250929",
-    max_tokens: 12000,
+    max_tokens: 16000,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -253,13 +253,27 @@ Return ONLY a JSON array of objects, no markdown fencing, no explanation before 
     throw new Error("No text response from Claude API");
   }
 
+  // Check if response was truncated
+  if (message.stop_reason === "max_tokens") {
+    throw new Error(
+      `Claude API response was truncated (used all ${message.usage.output_tokens} output tokens). Response may be incomplete.`
+    );
+  }
+
   // Parse JSON from response - strip any markdown fencing if present
   let jsonText = textBlock.text.trim();
   if (jsonText.startsWith("```")) {
     jsonText = jsonText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
   }
 
-  const parsed = JSON.parse(jsonText) as GeneratedReferenceBenchmark[];
+  let parsed: GeneratedReferenceBenchmark[];
+  try {
+    parsed = JSON.parse(jsonText) as GeneratedReferenceBenchmark[];
+  } catch (e) {
+    throw new Error(
+      `Failed to parse Claude API response as JSON: ${(e as Error).message}. First 200 chars: ${jsonText.slice(0, 200)}`
+    );
+  }
 
   // Validate and filter to known categories
   const validCategories = new Set<string>(BENEFIT_CATEGORIES);

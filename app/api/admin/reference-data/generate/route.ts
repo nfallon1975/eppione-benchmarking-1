@@ -106,8 +106,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ count, country });
   } catch (error) {
     console.error("Error generating reference data:", error);
+    const message =
+      error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to generate reference data" },
+      { error: `Failed to generate reference data: ${message}` },
       { status: 500 }
     );
   }
