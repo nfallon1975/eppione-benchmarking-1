@@ -71,11 +71,7 @@ export async function POST(req: NextRequest) {
       ].join("\n"),
     });
 
-    return NextResponse.json({
-      message: "Invite sent successfully",
-      version: "v2-no-hash",
-      tokenPrefix: token.substring(0, 8),
-    });
+    return NextResponse.json({ message: "Invite sent successfully" });
   } catch (error) {
     console.error("Error sending invite:", error);
     return NextResponse.json(
