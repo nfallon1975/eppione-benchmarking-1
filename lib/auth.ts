@@ -92,14 +92,22 @@ export const authOptions: NextAuthOptions = {
         };
       },
     }),
-    ...(process.env.EMAIL_SERVER
-      ? [
-          EmailProvider({
-            server: process.env.EMAIL_SERVER,
-            from: process.env.EMAIL_FROM || "noreply@eppione.com",
-          }),
-        ]
-      : []),
+    ...(() => {
+      const smtp =
+        process.env.EMAIL_SERVER ||
+        (process.env.RESEND_API_KEY
+          ? `smtp://resend:${process.env.RESEND_API_KEY}@smtp.resend.com:465`
+          : null);
+      if (!smtp) return [];
+      return [
+        EmailProvider({
+          server: smtp,
+          from:
+            process.env.EMAIL_FROM ||
+            "Eppione Benchmarking <noreply@tailoredtravelbylisa.com>",
+        }),
+      ];
+    })(),
   ],
   callbacks: {
     async jwt({ token, user }) {
