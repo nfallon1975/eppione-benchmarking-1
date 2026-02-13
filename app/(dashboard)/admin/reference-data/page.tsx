@@ -31,6 +31,7 @@ interface ReferenceBenchmarkRow {
   ipWaitingPeriodWeeks: number | null;
   pensionEmployerPct: number | null;
   pensionEmployeePct: number | null;
+  confidenceLevel: string | null;
   coverageNotes: string | null;
   sourceDescription: string | null;
   sourceUrls: string[];
@@ -142,6 +143,7 @@ export default function ReferenceDataPage() {
       pctEmployerFunded: row.pctEmployerFunded,
       pctCoversSpouse: row.pctCoversSpouse,
       pctCoversDependents: row.pctCoversDependents,
+      confidenceLevel: row.confidenceLevel,
       coverageNotes: row.coverageNotes,
       healthExcess: row.healthExcess,
       healthCopayPercent: row.healthCopayPercent,
@@ -180,6 +182,19 @@ export default function ReferenceDataPage() {
     if (row.publishedAt) return "text-green-600 bg-green-50";
     if (row.verifiedByAdmin) return "text-blue-600 bg-blue-50";
     return "text-amber-600 bg-amber-50";
+  }
+
+  function getConfidenceBadge(level: string | null) {
+    switch (level) {
+      case "HIGH":
+        return "text-green-700 bg-green-50 border-green-200";
+      case "MEDIUM":
+        return "text-yellow-700 bg-yellow-50 border-yellow-200";
+      case "LOW":
+        return "text-red-700 bg-red-50 border-red-200";
+      default:
+        return "text-slate-500 bg-slate-50 border-slate-200";
+    }
   }
 
   function isStale(row: ReferenceBenchmarkRow) {
@@ -289,6 +304,9 @@ export default function ReferenceDataPage() {
                   Median Cost
                 </th>
                 <th className="px-4 py-3 font-medium text-slate-600">
+                  Confidence
+                </th>
+                <th className="px-4 py-3 font-medium text-slate-600">
                   Status
                 </th>
                 <th className="px-4 py-3 font-medium text-slate-600">
@@ -339,6 +357,33 @@ export default function ReferenceDataPage() {
                       />
                     ) : row.costMedian !== null ? (
                       formatCurrency(row.costMedian, row.costCurrency)
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {editingId === row.id ? (
+                      <select
+                        value={editForm.confidenceLevel ?? ""}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            confidenceLevel: e.target.value || null,
+                          })
+                        }
+                        className="rounded border px-2 py-1 text-sm"
+                      >
+                        <option value="">—</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="LOW">LOW</option>
+                      </select>
+                    ) : row.confidenceLevel ? (
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getConfidenceBadge(row.confidenceLevel)}`}
+                      >
+                        {row.confidenceLevel}
+                      </span>
                     ) : (
                       <span className="text-slate-400">—</span>
                     )}

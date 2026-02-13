@@ -485,6 +485,7 @@ model ReferenceBenchmark {
   pensionEmployerPct        Float?
   pensionEmployeePct        Float?
   // Metadata
+  confidenceLevel           String?         // "HIGH", "MEDIUM", "LOW"
   coverageNotes             String?         @db.Text
   sourceDescription         String?         @db.Text
   sourceUrls                String[]
