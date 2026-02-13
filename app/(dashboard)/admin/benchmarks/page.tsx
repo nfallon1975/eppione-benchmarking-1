@@ -36,7 +36,6 @@ import { BenchmarkCostTab } from "@/components/benchmarks/benchmark-cost-tab";
 import { BenchmarkPlatformTab } from "@/components/benchmarks/benchmark-platform-tab";
 import type { BenchmarkResult } from "@/lib/benchmarking-types";
 import {
-  COUNTRY_LABELS,
   NACE_INDUSTRIES,
   BENEFIT_CATEGORY_LABELS,
   EMPLOYEE_COUNT_RANGES,

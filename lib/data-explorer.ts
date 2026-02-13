@@ -409,7 +409,7 @@ export async function executeQuerySpec(
     });
 
     // If there are joined fields, fetch the related data and merge
-    let joinedData = new Map<string, Record<string, unknown>>();
+    const joinedData = new Map<string, Record<string, unknown>>();
     if (joinedGroupBy.length > 0) {
       const companyIds = groupByResult
         .map((r) => r.companyId as string)

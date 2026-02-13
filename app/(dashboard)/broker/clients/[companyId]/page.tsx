@@ -8,17 +8,9 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { COUNTRY_LABELS } from "@/lib/utils";
 import { CountryPicker } from "@/components/ui/country-picker";
 import type { BenchmarkResult } from "@/lib/benchmarking-types";
 import { BenchmarkDetailedTab } from "@/components/benchmarks/benchmark-detailed-tab";

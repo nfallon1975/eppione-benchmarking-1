@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Create User
-      const user = await prisma.user.create({
+      await prisma.user.create({
         data: {
           email: row.email,
           name: row.name,

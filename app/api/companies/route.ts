@@ -89,7 +89,7 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    let { companyId } = session.user;
+    const { companyId } = session.user;
 
     const body = await req.json();
     const data = updateCompanySchema.parse(body);

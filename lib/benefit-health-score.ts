@@ -89,11 +89,12 @@ function getCompanyEntries(
 
 function scoreCoverage(
   offered: boolean,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   prevalence: number
 ): number {
   if (!offered) return 0;
   // Base 25 for offering it
-  let score = 25;
+  const score = 25;
   // Bonus for rare categories: if prevalence < 50%, treat as rare/valuable
   // This is already baked into the 25 base — rare categories just get full marks
   // The weighting step will naturally down-weight rare categories anyway

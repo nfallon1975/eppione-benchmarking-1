@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { NACE_INDUSTRIES, COUNTRY_LABELS } from "@/lib/utils";
+import { NACE_INDUSTRIES } from "@/lib/utils";
 import { CountryPicker } from "@/components/ui/country-picker";
 
 interface CompanyData {
