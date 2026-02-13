@@ -6,43 +6,24 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const token = searchParams.get("token");
   const email = searchParams.get("email");
-  const debug = searchParams.get("debug") === "1";
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
   if (!token || !email) {
-    if (debug) return NextResponse.json({ error: "MissingParams", token: !!token, email: !!email });
     return NextResponse.redirect(`${baseUrl}/login?error=MissingParams`);
   }
 
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) {
-    if (debug) return NextResponse.json({ error: "Configuration", hasSecret: false });
     return NextResponse.redirect(`${baseUrl}/login?error=Configuration`);
   }
 
   try {
     // Look up the verification token directly
-    const allTokens = debug
-      ? await prisma.verificationToken.findMany({ where: { identifier: email } })
-      : [];
-
     const stored = await prisma.verificationToken.findFirst({
       where: { identifier: email, token },
     });
 
     if (!stored) {
-      if (debug) {
-        return NextResponse.json({
-          error: "InvalidToken",
-          emailFromUrl: email,
-          tokenFromUrl: token.substring(0, 10) + "...",
-          tokensForEmail: allTokens.map((t: { token: string; expires: Date }) => ({
-            tokenPrefix: t.token.substring(0, 10) + "...",
-            expires: t.expires,
-            matches: t.token === token,
-          })),
-        });
-      }
       return NextResponse.redirect(`${baseUrl}/login?error=InvalidToken`);
     }
 
@@ -52,7 +33,6 @@ export async function GET(req: NextRequest) {
     });
 
     if (stored.expires < new Date()) {
-      if (debug) return NextResponse.json({ error: "TokenExpired", expires: stored.expires });
       return NextResponse.redirect(`${baseUrl}/login?error=TokenExpired`);
     }
 
@@ -72,17 +52,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user) {
-      if (debug) return NextResponse.json({ error: "UserNotFound", email });
       return NextResponse.redirect(`${baseUrl}/login?error=UserNotFound`);
-    }
-
-    if (debug) {
-      return NextResponse.json({
-        success: true,
-        user: { id: user.id, email: user.email, role: user.role },
-        needsPassword: !user.passwordHash,
-        redirectTo: !user.passwordHash ? "/set-password" : "/dashboard",
-      });
     }
 
     // Create a NextAuth JWT token
@@ -122,7 +92,7 @@ export async function GET(req: NextRequest) {
 
     return response;
   } catch (err) {
-    if (debug) return NextResponse.json({ error: "Exception", message: String(err) });
+    console.error("verify-invite error:", err);
     return NextResponse.redirect(`${baseUrl}/login?error=ServerError`);
   }
 }
