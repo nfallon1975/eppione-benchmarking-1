@@ -1,4 +1,12 @@
+import { Resend } from "resend";
+
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@eppione.com";
+const EMAIL_FROM =
+  process.env.EMAIL_FROM || "Eppione Benchmarking <noreply@tailoredtravelbylisa.com>";
+
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 interface SendEmailParams {
   to: string;
@@ -6,16 +14,31 @@ interface SendEmailParams {
   body: string;
 }
 
-/**
- * Placeholder email sender — logs to console.
- * Replace with nodemailer / SendGrid / Resend when ready.
- */
 export async function sendEmail({ to, subject, body }: SendEmailParams) {
-  console.log("--- EMAIL ---");
-  console.log(`To: ${to}`);
-  console.log(`Subject: ${subject}`);
-  console.log(`Body:\n${body}`);
-  console.log("--- END EMAIL ---");
+  if (!resend) {
+    console.log("--- EMAIL (no RESEND_API_KEY, logging only) ---");
+    console.log(`To: ${to}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`Body:\n${body}`);
+    console.log("--- END EMAIL ---");
+    return;
+  }
+
+  try {
+    const { error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to,
+      subject,
+      text: body,
+    });
+    if (error) {
+      console.error("Resend error:", error);
+    } else {
+      console.log(`Email sent to ${to}: ${subject}`);
+    }
+  } catch (err) {
+    console.error("Failed to send email:", err);
+  }
 }
 
 export async function notifyAdminNewRegistration(user: {
