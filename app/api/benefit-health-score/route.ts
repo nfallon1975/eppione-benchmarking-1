@@ -14,6 +14,7 @@ import type {
 } from "@/lib/benchmarking-types";
 import { prismaEntryToCompanyBenefitData } from "@/lib/benefit-data-mapping";
 import { calculateBenefitHealthScore } from "@/lib/benefit-health-score";
+import { buildReferenceCategories } from "@/lib/reference-benchmarking";
 
 export async function GET(req: NextRequest) {
   try {
@@ -64,35 +65,35 @@ export async function GET(req: NextRequest) {
       approvedUsers.map((u) => u.companyId).filter((id): id is string => id !== null)
     );
 
-    if (approvedCompanyIds.size === 0) {
-      return NextResponse.json({ error: "Insufficient data" }, { status: 404 });
-    }
-
     // Get all companies that have completed the survey
-    const allCompanies = await prisma.company.findMany({
-      where: {
-        id: { in: Array.from(approvedCompanyIds) },
-        surveyCompletedAt: { not: null },
-      },
-      select: {
-        id: true,
-        country: true,
-        industry: true,
-        employeeCount: true,
-        employeeCountRange: true,
-        surveyCompletedAt: true,
-      },
-    });
+    const allCompanies = approvedCompanyIds.size > 0
+      ? await prisma.company.findMany({
+          where: {
+            id: { in: Array.from(approvedCompanyIds) },
+            surveyCompletedAt: { not: null },
+          },
+          select: {
+            id: true,
+            country: true,
+            industry: true,
+            employeeCount: true,
+            employeeCountRange: true,
+            surveyCompletedAt: true,
+          },
+        })
+      : [];
 
     // Multi-country: companies with benefits in the target country
-    const companiesWithBenefitsInCountry = await prisma.benefitEntry.findMany({
-      where: {
-        companyId: { in: Array.from(approvedCompanyIds) },
-        country: country,
-      },
-      select: { companyId: true },
-      distinct: ["companyId"],
-    });
+    const companiesWithBenefitsInCountry = approvedCompanyIds.size > 0
+      ? await prisma.benefitEntry.findMany({
+          where: {
+            companyId: { in: Array.from(approvedCompanyIds) },
+            country: country,
+          },
+          select: { companyId: true },
+          distinct: ["companyId"],
+        })
+      : [];
     const countryBenefitCompanyIds = new Set(
       companiesWithBenefitsInCountry.map((b) => b.companyId)
     );
@@ -116,8 +117,48 @@ export async function GET(req: NextRequest) {
       grouping
     );
 
+    // Fetch the user's own benefits (needed for both peer and reference paths)
+    const myBenefitEntries = await prisma.benefitEntry.findMany({
+      where: { companyId },
+      include: { company: { select: { country: true } } },
+    });
+    const myBenefits = myBenefitEntries
+      .filter((e) => {
+        const entryCountry = e.country || e.company.country;
+        return entryCountry === country || e.country === "";
+      })
+      .map((e) => prismaEntryToCompanyBenefitData(e));
+
     if (matchingIds.size === 0) {
-      return NextResponse.json({ error: "Insufficient data" }, { status: 404 });
+      // Fallback to reference data
+      const referenceCategories = await buildReferenceCategories(
+        country,
+        targetCurrency,
+        rates
+      );
+      if (referenceCategories.length === 0 || myBenefits.length === 0) {
+        return NextResponse.json({ error: "Insufficient data" }, { status: 404 });
+      }
+
+      const companyPositions = calculateCompanyPosition(
+        myBenefits,
+        referenceCategories,
+        targetCurrency,
+        rates
+      );
+      const score = calculateBenefitHealthScore(
+        companyPositions,
+        referenceCategories,
+        myBenefits
+      );
+
+      return NextResponse.json({
+        ...score,
+        country,
+        totalCompanies: 0,
+        dataQuality: "reference",
+        dataAsOf: new Date().toISOString(),
+      });
     }
 
     const totalCompanies = matchingIds.size;
@@ -148,9 +189,9 @@ export async function GET(req: NextRequest) {
     );
 
     // Company's own benefits & position
-    const myBenefits = filteredBenefits.filter((b) => b.companyId === companyId);
+    const peerMyBenefits = filteredBenefits.filter((b) => b.companyId === companyId);
     const companyPositions = calculateCompanyPosition(
-      myBenefits,
+      peerMyBenefits,
       categories,
       targetCurrency,
       rates
@@ -160,7 +201,7 @@ export async function GET(req: NextRequest) {
     const score = calculateBenefitHealthScore(
       companyPositions,
       categories,
-      myBenefits
+      peerMyBenefits
     );
 
     // Data as of
