@@ -14,7 +14,7 @@ import { BenchmarkPlatformTab } from "@/components/benchmarks/benchmark-platform
 import { BenchmarkCrossCountryTab } from "@/components/benchmarks/benchmark-cross-country-tab";
 import { BenchmarkGlobalTab } from "@/components/benchmarks/benchmark-global-tab";
 import { ReportModal } from "@/components/benchmarks/report-modal";
-import { FileText, CheckCircle2, AlertTriangle, Info } from "lucide-react";
+import { FileText, CheckCircle2, AlertTriangle, Info, ChevronDown, ExternalLink } from "lucide-react";
 import type { BenchmarkResult } from "@/lib/benchmarking-types";
 import { COUNTRY_LABELS } from "@/lib/utils";
 
@@ -30,6 +30,7 @@ export default function BenchmarkingPage() {
   const [isMultiCountry, setIsMultiCountry] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
 
   // Load company info on mount
   useEffect(() => {
@@ -162,6 +163,70 @@ export default function BenchmarkingPage() {
             <Info className="h-4 w-4 shrink-0" />
           )}
           <span>{benchmarkData.dataQualityMessage}</span>
+        </div>
+      )}
+
+      {/* Reference Data Sources */}
+      {!loading && benchmarkData && benchmarkData.dataQuality === "reference" && benchmarkData.categories.length > 0 && (
+        <div className="rounded-lg border border-slate-200 bg-white">
+          <button
+            onClick={() => setSourcesOpen(!sourcesOpen)}
+            className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            <span>Data Sources & Confidence</span>
+            <ChevronDown
+              className={`h-4 w-4 text-slate-400 transition-transform ${sourcesOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {sourcesOpen && (
+            <div className="border-t px-4 pb-4">
+              <div className="mt-3 space-y-3">
+                {benchmarkData.categories
+                  .filter((c) => c.sourceDescription || c.confidenceLevel)
+                  .map((cat) => (
+                    <div key={cat.category} className="flex items-start gap-3 text-sm">
+                      <div className="w-36 shrink-0">
+                        <span className="font-medium text-slate-700">{cat.categoryLabel}</span>
+                        {cat.confidenceLevel && (
+                          <span
+                            className={`ml-2 inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${
+                              cat.confidenceLevel === "HIGH"
+                                ? "border-green-200 bg-green-50 text-green-700"
+                                : cat.confidenceLevel === "MEDIUM"
+                                  ? "border-yellow-200 bg-yellow-50 text-yellow-700"
+                                  : "border-red-200 bg-red-50 text-red-700"
+                            }`}
+                          >
+                            {cat.confidenceLevel}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        {cat.sourceDescription && (
+                          <p className="text-slate-600">{cat.sourceDescription}</p>
+                        )}
+                        {cat.sourceUrls && cat.sourceUrls.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-2">
+                            {cat.sourceUrls.map((url, i) => (
+                              <a
+                                key={i}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                {(() => { try { return new URL(url).hostname.replace("www.", ""); } catch { return url; } })()}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

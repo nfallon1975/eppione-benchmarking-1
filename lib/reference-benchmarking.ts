@@ -249,6 +249,10 @@ export async function buildReferenceCategories(
       pctCore: 100,
       pctVoluntary: 0,
       pctFlexible: 0,
+      confidenceLevel: ref.confidenceLevel,
+      sourceDescription: ref.sourceDescription,
+      sourceUrls: ref.sourceUrls,
+      coverageNotes: ref.coverageNotes,
     });
   }
 

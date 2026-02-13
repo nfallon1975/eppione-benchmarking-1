@@ -122,6 +122,11 @@ export interface CategoryBenchmark {
   pctCore: number;
   pctVoluntary: number;
   pctFlexible: number;
+  // Reference data metadata (only present when dataQuality === "reference")
+  confidenceLevel?: string | null;
+  sourceDescription?: string | null;
+  sourceUrls?: string[];
+  coverageNotes?: string | null;
 }
 
 export interface CompanyPosition {
