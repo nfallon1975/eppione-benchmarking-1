@@ -76,6 +76,23 @@ export async function GET(req: NextRequest) {
       // No approved companies at all — try reference data before returning empty
       const referenceCategories = await buildReferenceCategories(country, targetCurrency, rates);
       if (referenceCategories.length > 0) {
+        // Calculate company position against reference data
+        let companyPosition = null;
+        if (userCompanyId) {
+          const myBenefits = await prisma.benefitEntry.findMany({
+            where: { companyId: userCompanyId },
+            include: { company: { select: { country: true } } },
+          });
+          const myFiltered = myBenefits
+            .filter((e) => {
+              const entryCountry = e.country || e.company.country;
+              return entryCountry === country || e.country === "";
+            })
+            .map((e) => prismaEntryToCompanyBenefitData(e));
+          if (myFiltered.length > 0) {
+            companyPosition = calculateCompanyPosition(myFiltered, referenceCategories, targetCurrency, rates);
+          }
+        }
         const refResult: BenchmarkResult = {
           country,
           industry: industry || null,
@@ -86,7 +103,7 @@ export async function GET(req: NextRequest) {
           avgEmployeeCount: 0,
           avgSalary: null,
           categories: referenceCategories,
-          companyPosition: null,
+          companyPosition,
           platform: {
             adoptionRate: 0,
             totalCompanies: 0,
@@ -189,6 +206,23 @@ export async function GET(req: NextRequest) {
         rates
       );
       if (referenceCategories.length > 0) {
+        // Calculate company position against reference data
+        let companyPosition = null;
+        if (userCompanyId) {
+          const myBenefits = await prisma.benefitEntry.findMany({
+            where: { companyId: userCompanyId },
+            include: { company: { select: { country: true } } },
+          });
+          const myFiltered = myBenefits
+            .filter((e) => {
+              const entryCountry = e.country || e.company.country;
+              return entryCountry === country || e.country === "";
+            })
+            .map((e) => prismaEntryToCompanyBenefitData(e));
+          if (myFiltered.length > 0) {
+            companyPosition = calculateCompanyPosition(myFiltered, referenceCategories, targetCurrency, rates);
+          }
+        }
         const refResult: BenchmarkResult = {
           country,
           industry: industry || null,
@@ -199,7 +233,7 @@ export async function GET(req: NextRequest) {
           avgEmployeeCount: 0,
           avgSalary: null,
           categories: referenceCategories,
-          companyPosition: null,
+          companyPosition,
           platform: {
             adoptionRate: 0,
             totalCompanies: 0,
