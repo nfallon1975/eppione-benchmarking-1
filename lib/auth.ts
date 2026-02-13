@@ -92,10 +92,14 @@ export const authOptions: NextAuthOptions = {
         };
       },
     }),
-    EmailProvider({
-      server: process.env.EMAIL_SERVER || "smtp://localhost:1025",
-      from: process.env.EMAIL_FROM || "noreply@eppione.com",
-    }),
+    ...(process.env.EMAIL_SERVER
+      ? [
+          EmailProvider({
+            server: process.env.EMAIL_SERVER,
+            from: process.env.EMAIL_FROM || "noreply@eppione.com",
+          }),
+        ]
+      : []),
   ],
   callbacks: {
     async jwt({ token, user }) {
