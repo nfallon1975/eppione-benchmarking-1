@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { createHash } from "crypto";
 import { encode } from "next-auth/jwt";
 
 export async function GET(req: NextRequest) {
@@ -18,14 +17,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${baseUrl}/login?error=Configuration`);
   }
 
-  // Hash the token the same way we stored it
-  const hashedToken = createHash("sha256")
-    .update(`${token}${secret}`)
-    .digest("hex");
-
-  // Look up and consume the verification token
+  // Look up the verification token directly
   const stored = await prisma.verificationToken.findFirst({
-    where: { identifier: email, token: hashedToken },
+    where: { identifier: email, token },
   });
 
   if (!stored) {
@@ -34,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   // Delete the token (single use)
   await prisma.verificationToken.deleteMany({
-    where: { identifier: email, token: hashedToken },
+    where: { identifier: email, token },
   });
 
   if (stored.expires < new Date()) {
@@ -75,7 +69,6 @@ export async function GET(req: NextRequest) {
   });
 
   // Determine where to redirect
-  // If user has no password, send them to set one
   const needsPassword = !user.passwordHash;
   const redirectTo = needsPassword
     ? `${baseUrl}/set-password`
@@ -84,10 +77,9 @@ export async function GET(req: NextRequest) {
   const response = NextResponse.redirect(redirectTo);
 
   // Set the NextAuth session cookie
-  const cookieName =
-    baseUrl.startsWith("https") ?
-      "__Secure-next-auth.session-token" :
-      "next-auth.session-token";
+  const cookieName = baseUrl.startsWith("https")
+    ? "__Secure-next-auth.session-token"
+    : "next-auth.session-token";
 
   response.cookies.set(cookieName, jwt, {
     httpOnly: true,

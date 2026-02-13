@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { randomBytes, createHash } from "crypto";
+import { randomBytes } from "crypto";
 import { sendEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
@@ -34,21 +34,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate a NextAuth-compatible verification token
-    const secret = process.env.NEXTAUTH_SECRET;
-    if (!secret) {
-      console.error("NEXTAUTH_SECRET is not set");
-      return NextResponse.json(
-        { error: "Server configuration error" },
-        { status: 500 }
-      );
-    }
-
     const token = randomBytes(32).toString("hex");
-    const hashedToken = createHash("sha256")
-      .update(`${token}${secret}`)
-      .digest("hex");
-
     const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Remove any existing verification tokens for this email
@@ -56,11 +42,11 @@ export async function POST(req: NextRequest) {
       where: { identifier: email },
     });
 
-    // Store the hashed token (NextAuth convention)
+    // Store the token directly
     await prisma.verificationToken.create({
       data: {
         identifier: email,
-        token: hashedToken,
+        token,
         expires,
       },
     });
