@@ -107,3 +107,11 @@ export const adminClientRowSchema = z.object({
 });
 
 export type AdminClientUploadRow = z.infer<typeof adminClientRowSchema>;
+
+// --- Admin benefit row schema (client benefits + company identifier) ---
+
+export const adminBenefitRowSchema = clientBenefitRowSchema.extend({
+  companyName: z.string().min(1, "Company name is required"),
+});
+
+export type AdminBenefitUploadRow = z.infer<typeof adminBenefitRowSchema>;

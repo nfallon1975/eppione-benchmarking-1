@@ -19,8 +19,10 @@ import { parseCSV, validateRows, type RowValidationResult } from "@/lib/upload-u
 import {
   adminBrokerRowSchema,
   adminClientRowSchema,
+  adminBenefitRowSchema,
   type AdminBrokerUploadRow,
   type AdminClientUploadRow,
+  type AdminBenefitUploadRow,
 } from "@/lib/upload-schemas";
 
 const BROKER_COLUMNS = [
@@ -29,6 +31,14 @@ const BROKER_COLUMNS = [
   { key: "companyName", label: "Company Name" },
   { key: "licenseNumber", label: "License #" },
   { key: "countriesActive", label: "Countries" },
+];
+
+const BENEFIT_COLUMNS = [
+  { key: "companyName", label: "Company Name" },
+  { key: "country", label: "Country" },
+  { key: "benefitCategory", label: "Category" },
+  { key: "benefitName", label: "Benefit Name" },
+  { key: "annualCostPerEmployee", label: "Annual Cost/Employee" },
 ];
 
 const CLIENT_COLUMNS = [
@@ -47,12 +57,16 @@ export function AdminUploadPanel() {
       <TabsList>
         <TabsTrigger value="brokers">Upload Brokers</TabsTrigger>
         <TabsTrigger value="clients">Upload Clients</TabsTrigger>
+        <TabsTrigger value="benefits">Upload Benefits</TabsTrigger>
       </TabsList>
       <TabsContent value="brokers">
         <BrokerUploadTab />
       </TabsContent>
       <TabsContent value="clients">
         <ClientUploadTab />
+      </TabsContent>
+      <TabsContent value="benefits">
+        <BenefitUploadTab />
       </TabsContent>
     </Tabs>
   );
@@ -279,6 +293,124 @@ function ClientUploadTab() {
               { label: "Skipped", value: resultData.skipped.length },
             ]}
             warnings={resultData.skipped}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function BenefitUploadTab() {
+  const [filename, setFilename] = useState<string | undefined>();
+  const [fileSize, setFileSize] = useState<number | undefined>();
+  const [results, setResults] = useState<RowValidationResult<AdminBenefitUploadRow>[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [resultOpen, setResultOpen] = useState(false);
+  const [resultData, setResultData] = useState<{
+    companiesProcessed: number;
+    entriesCreated: number;
+    companies: { name: string; benefitCount: number }[];
+    notFound: string[];
+  } | null>(null);
+
+  function handleFileLoaded(text: string, name: string) {
+    setFilename(name);
+    setFileSize(new Blob([text]).size);
+    const { data } = parseCSV(text);
+    setResults(validateRows(data, adminBenefitRowSchema));
+  }
+
+  function handleClear() {
+    setFilename(undefined);
+    setFileSize(undefined);
+    setResults([]);
+  }
+
+  async function handleSubmit() {
+    const validRows = results.filter((r) => r.valid && r.data).map((r) => r.data!);
+    if (validRows.length === 0) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/upload/admin/benefits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows: validRows }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Upload failed");
+        return;
+      }
+      const data = await res.json();
+      setResultData(data);
+      setResultOpen(true);
+    } catch {
+      alert("Upload failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const validCount = results.filter((r) => r.valid).length;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Bulk Upload Benefits</CardTitle>
+        <CardDescription>
+          Upload benefits for multiple existing companies from a single CSV.
+          Companies are matched by name. Benefits for matching countries will be replaced.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Button
+          variant="outline"
+          onClick={() => window.open("/api/upload/template?type=admin_benefits", "_blank")}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Download Template
+        </Button>
+
+        <CsvUploadZone
+          onFileLoaded={handleFileLoaded}
+          onClear={handleClear}
+          filename={filename}
+          fileSize={fileSize}
+        />
+
+        {results.length > 0 && (
+          <>
+            <UploadPreviewTable columns={BENEFIT_COLUMNS} results={results} />
+            <div className="flex items-center justify-between">
+              <Badge variant="secondary">{validCount} valid of {results.length}</Badge>
+              <Button onClick={handleSubmit} disabled={submitting || validCount === 0}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  `Upload ${validCount} Benefit${validCount !== 1 ? "s" : ""}`
+                )}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {resultData && (
+          <UploadResultDialog
+            open={resultOpen}
+            onClose={() => { setResultOpen(false); handleClear(); }}
+            title="Benefits Uploaded"
+            results={[
+              { label: "Companies Processed", value: resultData.companiesProcessed },
+              { label: "Benefits Created", value: resultData.entriesCreated },
+              ...(resultData.notFound.length > 0
+                ? [{ label: "Companies Not Found", value: resultData.notFound.length }]
+                : []),
+            ]}
+            warnings={resultData.notFound.map((n) => `Company not found: ${n}`)}
           />
         )}
       </CardContent>

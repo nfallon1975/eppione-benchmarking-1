@@ -6,6 +6,7 @@ import {
   getBrokerClientTemplate,
   getAdminBrokerTemplate,
   getAdminClientTemplate,
+  getAdminBenefitTemplate,
 } from "@/lib/upload-templates";
 
 function toCSV(data: Record<string, string>[]): string {
@@ -30,6 +31,7 @@ const TEMPLATES: Record<string, { fn: () => Record<string, string>[]; filename: 
   broker_clients: { fn: getBrokerClientTemplate, filename: "broker_clients_template.csv" },
   admin_brokers: { fn: getAdminBrokerTemplate, filename: "admin_brokers_template.csv" },
   admin_clients: { fn: getAdminClientTemplate, filename: "admin_clients_template.csv" },
+  admin_benefits: { fn: getAdminBenefitTemplate, filename: "admin_benefits_template.csv" },
 };
 
 export async function GET(req: NextRequest) {
@@ -41,7 +43,7 @@ export async function GET(req: NextRequest) {
   const type = req.nextUrl.searchParams.get("type");
   if (!type || !TEMPLATES[type]) {
     return NextResponse.json(
-      { error: "Invalid template type. Use: client_benefits, broker_clients, admin_brokers, admin_clients" },
+      { error: "Invalid template type. Use: client_benefits, broker_clients, admin_brokers, admin_clients, admin_benefits" },
       { status: 400 }
     );
   }
