@@ -1,5 +1,34 @@
 import { BenefitCategory } from "@prisma/client";
 
+export const STANDARD_HEALTH_LIMIT_TYPES = [
+  { value: "INPATIENT", label: "Inpatient" },
+  { value: "OUTPATIENT", label: "Outpatient" },
+  { value: "DENTAL", label: "Dental" },
+  { value: "MENTAL_HEALTH", label: "Mental Health" },
+  { value: "OPTICAL", label: "Optical" },
+  { value: "MATERNITY", label: "Maternity" },
+] as const;
+
+export interface HealthLimitFormData {
+  tempId: string;
+  limitType: string;
+  customLimitName: string;
+  hasLimit: boolean;
+  limitAmount: number | null;
+  limitCurrency: string;
+}
+
+export function createEmptyHealthLimit(currency: string = "EUR"): HealthLimitFormData {
+  return {
+    tempId: crypto.randomUUID(),
+    limitType: "",
+    customLimitName: "",
+    hasLimit: true,
+    limitAmount: null,
+    limitCurrency: currency,
+  };
+}
+
 export interface BenefitFormData {
   tempId: string;
   benefitName: string;
@@ -22,6 +51,7 @@ export interface BenefitFormData {
   healthInpatientLimit: number | null;
   healthOutpatientLimit: number | null;
   healthLimitCurrency: string;
+  healthLimits: HealthLimitFormData[];
   // Life Insurance
   lifeCoverMultiple: number | null;
   lifeFixedCoverAmount: number | null;
@@ -134,6 +164,7 @@ export function createEmptyBenefit(currency: string = "EUR"): BenefitFormData {
     healthInpatientLimit: null,
     healthOutpatientLimit: null,
     healthLimitCurrency: currency,
+    healthLimits: [],
     lifeCoverMultiple: null,
     lifeFixedCoverAmount: null,
     lifeCoverAmountCurrency: currency,

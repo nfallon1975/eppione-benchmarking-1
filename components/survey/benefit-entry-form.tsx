@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
-import { BenefitFormData } from "@/lib/survey-types";
+import { BenefitFormData, HealthLimitFormData } from "@/lib/survey-types";
+import { HealthLimitsEditor } from "./health-limits-editor";
 
 interface BenefitEntryFormProps {
   benefit: BenefitFormData;
@@ -272,64 +273,13 @@ export function BenefitEntryForm({
               />
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Inpatient Limit</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={benefit.healthInpatientLimit ?? ""}
-                  onChange={(e) =>
-                    update("healthInpatientLimit", e.target.value ? parseFloat(e.target.value) : null)
-                  }
-                  placeholder="e.g. 1000000"
-                />
-                <Select
-                  value={benefit.healthLimitCurrency}
-                  onValueChange={(v) => update("healthLimitCurrency", v)}
-                >
-                  <SelectTrigger className="w-24">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencies.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Outpatient Limit</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={benefit.healthOutpatientLimit ?? ""}
-                  onChange={(e) =>
-                    update("healthOutpatientLimit", e.target.value ? parseFloat(e.target.value) : null)
-                  }
-                  placeholder="e.g. 50000"
-                />
-                <Select
-                  value={benefit.healthLimitCurrency}
-                  onValueChange={(v) => update("healthLimitCurrency", v)}
-                >
-                  <SelectTrigger className="w-24">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencies.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
+          <HealthLimitsEditor
+            limits={benefit.healthLimits}
+            currency={benefit.healthLimitCurrency}
+            onUpdate={(limits: HealthLimitFormData[]) =>
+              onUpdate({ ...benefit, healthLimits: limits })
+            }
+          />
         </div>
       )}
 

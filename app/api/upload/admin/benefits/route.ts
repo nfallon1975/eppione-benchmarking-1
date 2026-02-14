@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
         // Create new BenefitEntries
         let companyEntries = 0;
         for (const row of companyRows) {
-          await tx.benefitEntry.create({
+          const createdEntry = await tx.benefitEntry.create({
             data: {
               companyId,
               benefitCategory: row.benefitCategory as BenefitCategory,
@@ -142,6 +142,14 @@ export async function POST(req: NextRequest) {
               pensionEmployeePct: row.pensionEmployeePct,
             },
           });
+          if (row.benefitCategory === "HEALTH") {
+            if (row.healthInpatientLimit != null) {
+              await tx.healthLimit.create({ data: { benefitEntryId: createdEntry.id, limitType: "INPATIENT", hasLimit: true, limitAmount: row.healthInpatientLimit, limitCurrency: row.costCurrency || "EUR" } });
+            }
+            if (row.healthOutpatientLimit != null) {
+              await tx.healthLimit.create({ data: { benefitEntryId: createdEntry.id, limitType: "OUTPATIENT", hasLimit: true, limitAmount: row.healthOutpatientLimit, limitCurrency: row.costCurrency || "EUR" } });
+            }
+          }
           entriesCreated++;
           companyEntries++;
         }

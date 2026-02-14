@@ -46,6 +46,12 @@ const createBenefitSchema = z.object({
   healthInpatientLimit: z.number().nullable().optional(),
   healthOutpatientLimit: z.number().nullable().optional(),
   healthLimitCurrency: z.string().optional(),
+  healthLimits: z.array(z.object({
+    limitType: z.string().min(1),
+    hasLimit: z.boolean(),
+    limitAmount: z.number().nullable(),
+    limitCurrency: z.string().optional().default("EUR"),
+  })).optional(),
   lifeCoverMultiple: z.number().nullable().optional(),
   lifeFixedCoverAmount: z.number().nullable().optional(),
   lifeCoverAmountCurrency: z.string().optional(),
@@ -92,6 +98,7 @@ export async function GET(req: NextRequest) {
     const benefits = await prisma.benefitEntry.findMany({
       where: { companyId },
       orderBy: { createdAt: "desc" },
+      include: { healthLimits: true },
     });
 
     return NextResponse.json(benefits);
@@ -144,7 +151,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createBenefitSchema.parse(body);
 
-    const { renewalDate, ...restData } = data;
+    const { renewalDate, healthLimits: healthLimitsData, ...restData } = data;
     const benefit = await prisma.benefitEntry.create({
       data: {
         ...restData,
@@ -152,6 +159,21 @@ export async function POST(req: NextRequest) {
         companyId,
       },
     });
+
+    // Create HealthLimit records if provided
+    if (healthLimitsData && healthLimitsData.length > 0) {
+      for (const hl of healthLimitsData) {
+        await prisma.healthLimit.create({
+          data: {
+            benefitEntryId: benefit.id,
+            limitType: hl.limitType,
+            hasLimit: hl.hasLimit,
+            limitAmount: hl.hasLimit ? hl.limitAmount : null,
+            limitCurrency: hl.limitCurrency,
+          },
+        });
+      }
+    }
 
     // Auto-run compliance check (fire-and-forget)
     const company = await prisma.company.findUnique({

@@ -10,6 +10,7 @@ import {
   type BenchmarkFilters,
   type BenchmarkGrouping,
   type HealthCategoryStats,
+  type HealthLimitTypeStats,
   type LifeCategoryStats,
   type IpCategoryStats,
   type CiCategoryStats,
@@ -20,6 +21,15 @@ import { type CurrencyRateMap, convertCurrency } from "./currency";
 import { BENEFIT_CATEGORY_LABELS } from "./utils";
 
 export const ANONYMITY_MINIMUM = 3;
+
+const HEALTH_LIMIT_TYPE_LABELS: Record<string, string> = {
+  INPATIENT: "Inpatient",
+  OUTPATIENT: "Outpatient",
+  DENTAL: "Dental",
+  MENTAL_HEALTH: "Mental Health",
+  OPTICAL: "Optical",
+  MATERNITY: "Maternity",
+};
 
 /**
  * Calculate percentile using linear interpolation (Excel PERCENTILE.INC method).
@@ -118,18 +128,50 @@ export function calculateCategoryBenchmarks(
         }
       }
 
+      // Per-limit-type stats from HealthLimit records
+      const limitsByType = new Map<string, { withLimit: number[]; fullCover: number }>();
+      for (const e of entries) {
+        for (const hl of e.healthLimits) {
+          if (!limitsByType.has(hl.limitType)) {
+            limitsByType.set(hl.limitType, { withLimit: [], fullCover: 0 });
+          }
+          const bucket = limitsByType.get(hl.limitType)!;
+          if (hl.hasLimit && hl.limitAmount !== null) {
+            bucket.withLimit.push(
+              convertCurrency(hl.limitAmount, hl.limitCurrency || "EUR", targetCurrency, rates)
+            );
+          } else if (!hl.hasLimit) {
+            bucket.fullCover++;
+          }
+        }
+      }
+
+      const limitTypeStats: HealthLimitTypeStats[] = [];
+      for (const [limitType, bucket] of Array.from(limitsByType.entries())) {
+        limitTypeStats.push({
+          limitType,
+          limitTypeLabel: HEALTH_LIMIT_TYPE_LABELS[limitType] || limitType,
+          totalCompanies: bucket.withLimit.length + bucket.fullCover,
+          companiesWithLimit: bucket.withLimit.length,
+          companiesFullCover: bucket.fullCover,
+          limitStats: calculatePercentileStats(bucket.withLimit),
+        });
+      }
+
       healthStats = {
         excessStats: calculatePercentileStats(excessValues),
         copayStats: calculatePercentileStats(copayValues),
         inpatientLimitStats: calculatePercentileStats(inpatientValues),
         outpatientLimitStats: calculatePercentileStats(outpatientValues),
+        limitTypeStats,
       };
 
       if (
         !healthStats.excessStats &&
         !healthStats.copayStats &&
         !healthStats.inpatientLimitStats &&
-        !healthStats.outpatientLimitStats
+        !healthStats.outpatientLimitStats &&
+        healthStats.limitTypeStats.length === 0
       ) {
         healthStats = null;
       }
@@ -462,6 +504,27 @@ export function calculateCompanyPosition(
       }
     }
 
+    // Health limit positions from HealthLimit records
+    const healthLimitPositions: { limitType: string; hasLimit: boolean; limitAmount: number | null; limitAmountConverted: number | null }[] = [];
+    if (bm.category === "HEALTH" && myEntries.length > 0) {
+      const seenTypes = new Set<string>();
+      for (const e of myEntries) {
+        for (const hl of e.healthLimits) {
+          if (!seenTypes.has(hl.limitType)) {
+            seenTypes.add(hl.limitType);
+            healthLimitPositions.push({
+              limitType: hl.limitType,
+              hasLimit: hl.hasLimit,
+              limitAmount: hl.limitAmount,
+              limitAmountConverted: hl.hasLimit && hl.limitAmount !== null
+                ? Math.round(convertCurrency(hl.limitAmount, hl.limitCurrency || "EUR", targetCurrency, rates))
+                : null,
+            });
+          }
+        }
+      }
+    }
+
     // Life Insurance detail values
     let lifeCoverMultiple: number | null = null;
     let lifeFixedCoverAmount: number | null = null;
@@ -574,6 +637,7 @@ export function calculateCompanyPosition(
       healthInpatientLimitConverted,
       healthOutpatientLimit,
       healthOutpatientLimitConverted,
+      healthLimitPositions,
       lifeCoverMultiple,
       lifeFixedCoverAmount,
       lifeFixedCoverAmountConverted,

@@ -225,7 +225,7 @@ function CategoryDetailsCard({
   companyPosition: CompanyPosition[] | null;
   targetCurrency: string;
 }) {
-  const sections: { title: string; description: string; metrics: CategoryMetric[]; companyCount: number }[] = [];
+  const sections: { title: string; description: string; metrics: CategoryMetric[]; companyCount: number; limitInfo?: { label: string; withLimit: number; fullCover: number }[] }[] = [];
 
   // HEALTH
   const healthCat = categories.find((c) => c.category === "HEALTH");
@@ -235,11 +235,48 @@ function CategoryDetailsCard({
     const metrics: CategoryMetric[] = [
       { label: "Excess (Deductible)", stats: hs?.excessStats ?? null, yourValue: pos?.healthExcessConverted ?? null, formatType: "currency" },
       { label: "Co-Pay %", stats: hs?.copayStats ?? null, yourValue: pos?.healthCopayPercent ?? null, formatType: "percent" },
-      { label: "Inpatient Limit", stats: hs?.inpatientLimitStats ?? null, yourValue: pos?.healthInpatientLimitConverted ?? null, formatType: "currency" },
-      { label: "Outpatient Limit", stats: hs?.outpatientLimitStats ?? null, yourValue: pos?.healthOutpatientLimitConverted ?? null, formatType: "currency" },
     ];
+
+    // Add dynamic limit type rows from new HealthLimit model
+    const limitTypeStats = hs?.limitTypeStats ?? [];
+    if (limitTypeStats.length > 0) {
+      for (const lts of limitTypeStats) {
+        const myLimitPos = pos?.healthLimitPositions?.find((p) => p.limitType === lts.limitType);
+        metrics.push({
+          label: `${lts.limitTypeLabel} Limit`,
+          stats: lts.limitStats,
+          yourValue: myLimitPos?.limitAmountConverted ?? null,
+          formatType: "currency",
+        });
+      }
+    } else {
+      // Fallback to old flat fields if no limitTypeStats
+      metrics.push(
+        { label: "Inpatient Limit", stats: hs?.inpatientLimitStats ?? null, yourValue: pos?.healthInpatientLimitConverted ?? null, formatType: "currency" },
+        { label: "Outpatient Limit", stats: hs?.outpatientLimitStats ?? null, yourValue: pos?.healthOutpatientLimitConverted ?? null, formatType: "currency" },
+      );
+    }
+
     if (metrics.some((m) => m.stats !== null || m.yourValue !== null)) {
-      sections.push({ title: "Health Insurance Plan Details", description: "Comparison of health plan parameters across the market", metrics, companyCount: healthCat.companyCount });
+      // Build extra info lines for limit types that have full cover counts
+      const limitInfoLines: { label: string; withLimit: number; fullCover: number }[] = [];
+      for (const lts of limitTypeStats) {
+        if (lts.totalCompanies > 0) {
+          limitInfoLines.push({
+            label: lts.limitTypeLabel,
+            withLimit: lts.companiesWithLimit,
+            fullCover: lts.companiesFullCover,
+          });
+        }
+      }
+
+      sections.push({
+        title: "Health Insurance Plan Details",
+        description: "Comparison of health plan parameters across the market",
+        metrics,
+        companyCount: healthCat.companyCount,
+        limitInfo: limitInfoLines.length > 0 ? limitInfoLines : undefined,
+      });
     }
   }
 
@@ -371,6 +408,22 @@ function CategoryDetailsCard({
                 ))}
               </TableBody>
             </Table>
+
+            {section.limitInfo && section.limitInfo.length > 0 && (
+              <div className="mt-4 rounded-md bg-slate-50 p-3">
+                <p className="mb-2 text-xs font-semibold text-slate-600 uppercase tracking-wide">Cover Limits Breakdown</p>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {section.limitInfo.map((li) => (
+                    <div key={li.label} className="text-sm text-slate-700">
+                      <span className="font-medium">{li.label}:</span>{" "}
+                      {li.withLimit > 0 && <span>{li.withLimit} with limit</span>}
+                      {li.withLimit > 0 && li.fullCover > 0 && <span>, </span>}
+                      {li.fullCover > 0 && <span className="text-emerald-600">{li.fullCover} full cover</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {section.metrics.some((m) => m.stats !== null) && (
               <div className="mt-6 space-y-4">

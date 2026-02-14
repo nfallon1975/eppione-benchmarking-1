@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { BENEFIT_CATEGORY_LABELS, formatCurrency } from "@/lib/utils";
+import { HealthLimitsEditor } from "@/components/survey/health-limits-editor";
+import type { HealthLimitFormData } from "@/lib/survey-types";
 
 interface BenefitEntry {
   id: string;
@@ -57,6 +59,7 @@ interface BenefitEntry {
   healthInpatientLimit: number | null;
   healthOutpatientLimit: number | null;
   healthLimitCurrency: string;
+  healthLimits?: { id: string; limitType: string; hasLimit: boolean; limitAmount: number | null; limitCurrency: string }[];
   lifeCoverMultiple: number | null;
   lifeFixedCoverAmount: number | null;
   lifeCoverAmountCurrency: string;
@@ -100,6 +103,7 @@ const emptyForm = {
   healthInpatientLimit: "",
   healthOutpatientLimit: "",
   healthLimitCurrency: "EUR",
+  healthLimits: [] as HealthLimitFormData[],
   lifeCoverMultiple: "",
   lifeFixedCoverAmount: "",
   lifeCoverAmountCurrency: "EUR",
@@ -185,6 +189,14 @@ export default function BenefitsPage() {
       healthInpatientLimit: benefit.healthInpatientLimit?.toString() ?? "",
       healthOutpatientLimit: benefit.healthOutpatientLimit?.toString() ?? "",
       healthLimitCurrency: benefit.healthLimitCurrency || "EUR",
+      healthLimits: (benefit.healthLimits ?? []).map((hl) => ({
+        tempId: hl.id,
+        limitType: hl.limitType,
+        customLimitName: "",
+        hasLimit: hl.hasLimit,
+        limitAmount: hl.limitAmount,
+        limitCurrency: hl.limitCurrency,
+      })),
       lifeCoverMultiple: benefit.lifeCoverMultiple?.toString() ?? "",
       lifeFixedCoverAmount: benefit.lifeFixedCoverAmount?.toString() ?? "",
       lifeCoverAmountCurrency: benefit.lifeCoverAmountCurrency || "EUR",
@@ -250,6 +262,12 @@ export default function BenefitsPage() {
         ? parseFloat(formData.healthOutpatientLimit)
         : null,
       healthLimitCurrency: formData.healthLimitCurrency,
+      healthLimits: formData.healthLimits.filter((hl: HealthLimitFormData) => hl.limitType).map((hl: HealthLimitFormData) => ({
+        limitType: hl.limitType === "CUSTOM" ? hl.customLimitName : hl.limitType,
+        hasLimit: hl.hasLimit,
+        limitAmount: hl.hasLimit ? hl.limitAmount : null,
+        limitCurrency: hl.limitCurrency,
+      })),
       lifeCoverMultiple: formData.lifeCoverMultiple
         ? parseFloat(formData.lifeCoverMultiple as string)
         : null,
@@ -719,60 +737,11 @@ export default function BenefitsPage() {
                     />
                   </div>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Inpatient Limit</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={formData.healthInpatientLimit}
-                        onChange={(e) => updateField("healthInpatientLimit", e.target.value)}
-                        placeholder="e.g. 1000000"
-                      />
-                      <Select
-                        value={formData.healthLimitCurrency}
-                        onValueChange={(v) => updateField("healthLimitCurrency", v)}
-                      >
-                        <SelectTrigger className="w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {currencies.map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Outpatient Limit</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={formData.healthOutpatientLimit}
-                        onChange={(e) => updateField("healthOutpatientLimit", e.target.value)}
-                        placeholder="e.g. 50000"
-                      />
-                      <Select
-                        value={formData.healthLimitCurrency}
-                        onValueChange={(v) => updateField("healthLimitCurrency", v)}
-                      >
-                        <SelectTrigger className="w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {currencies.map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
+                <HealthLimitsEditor
+                  limits={formData.healthLimits}
+                  currency={formData.healthLimitCurrency}
+                  onUpdate={(limits) => setFormData((prev) => ({ ...prev, healthLimits: limits }))}
+                />
               </div>
             )}
 

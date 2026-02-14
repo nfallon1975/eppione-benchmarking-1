@@ -113,7 +113,7 @@ export async function GET() {
     const company = await prisma.company.findUnique({
       where: { id: companyId },
       include: {
-        benefitEntries: true,
+        benefitEntries: { include: { healthLimits: true } },
         platformInfo: { take: 1, orderBy: { createdAt: "desc" } },
         countryProfiles: true,
       },
@@ -307,6 +307,7 @@ function benefitEntryToFormData(entry: {
   healthInpatientLimit?: number | null;
   healthOutpatientLimit?: number | null;
   healthLimitCurrency?: string;
+  healthLimits?: { id: string; limitType: string; hasLimit: boolean; limitAmount: number | null; limitCurrency: string }[];
   lifeCoverMultiple?: number | null;
   lifeFixedCoverAmount?: number | null;
   lifeCoverAmountCurrency?: string;
@@ -349,6 +350,14 @@ function benefitEntryToFormData(entry: {
     healthInpatientLimit: entry.healthInpatientLimit ?? null,
     healthOutpatientLimit: entry.healthOutpatientLimit ?? null,
     healthLimitCurrency: entry.healthLimitCurrency || "EUR",
+    healthLimits: (entry.healthLimits ?? []).map((hl) => ({
+      tempId: hl.id,
+      limitType: hl.limitType,
+      customLimitName: "",
+      hasLimit: hl.hasLimit,
+      limitAmount: hl.limitAmount,
+      limitCurrency: hl.limitCurrency,
+    })),
     lifeCoverMultiple: entry.lifeCoverMultiple ?? null,
     lifeFixedCoverAmount: entry.lifeFixedCoverAmount ?? null,
     lifeCoverAmountCurrency: entry.lifeCoverAmountCurrency || "EUR",

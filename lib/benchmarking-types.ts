@@ -27,6 +27,7 @@ export interface CompanyBenefitData {
   healthInpatientLimit: number | null;
   healthOutpatientLimit: number | null;
   healthLimitCurrency: string;
+  healthLimits: { limitType: string; hasLimit: boolean; limitAmount: number | null; limitCurrency: string }[];
   // Life Insurance
   lifeCoverMultiple: number | null;
   lifeFixedCoverAmount: number | null;
@@ -69,11 +70,21 @@ export interface PercentileStats {
   count: number;
 }
 
+export interface HealthLimitTypeStats {
+  limitType: string;
+  limitTypeLabel: string;
+  totalCompanies: number;
+  companiesWithLimit: number;
+  companiesFullCover: number;
+  limitStats: PercentileStats | null;
+}
+
 export interface HealthCategoryStats {
   excessStats: PercentileStats | null;
   copayStats: PercentileStats | null;
   inpatientLimitStats: PercentileStats | null;
   outpatientLimitStats: PercentileStats | null;
+  limitTypeStats: HealthLimitTypeStats[];
 }
 
 export interface LifeCategoryStats {
@@ -142,6 +153,7 @@ export interface CompanyPosition {
   healthInpatientLimitConverted: number | null;
   healthOutpatientLimit: number | null;
   healthOutpatientLimitConverted: number | null;
+  healthLimitPositions: { limitType: string; hasLimit: boolean; limitAmount: number | null; limitAmountConverted: number | null }[];
   // Life Insurance
   lifeCoverMultiple: number | null;
   lifeFixedCoverAmount: number | null;

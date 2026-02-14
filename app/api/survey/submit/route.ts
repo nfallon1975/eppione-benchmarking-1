@@ -28,6 +28,13 @@ const benefitFormSchema = z.object({
   healthInpatientLimit: z.number().nullable().optional().default(null),
   healthOutpatientLimit: z.number().nullable().optional().default(null),
   healthLimitCurrency: z.string().optional().default("EUR"),
+  healthLimits: z.array(z.object({
+    limitType: z.string().min(1),
+    customLimitName: z.string().optional().default(""),
+    hasLimit: z.boolean(),
+    limitAmount: z.number().nullable(),
+    limitCurrency: z.string().optional().default("EUR"),
+  })).optional().default([]),
   // Life Insurance
   lifeCoverMultiple: z.number().nullable().optional().default(null),
   lifeFixedCoverAmount: z.number().nullable().optional().default(null),
@@ -183,7 +190,7 @@ export async function POST(req: NextRequest) {
       });
 
       // 4. Create new BenefitEntries from Steps 2 (core) + 3 (flex/voluntary) with country
-      const benefitEntries: Parameters<typeof tx.benefitEntry.create>[0]["data"][] = [];
+      const benefitEntries: { data: Parameters<typeof tx.benefitEntry.create>[0]["data"]; healthLimits: { limitType: string; hasLimit: boolean; limitAmount: number | null; limitCurrency: string }[] }[] = [];
 
       for (const [country, categories] of Object.entries(
         data.step2.countriesData
@@ -192,7 +199,21 @@ export async function POST(req: NextRequest) {
           if (catData.notOffered) continue;
           for (const benefit of catData.benefits) {
             if (!benefit.benefitName || !benefit.coverLevel) continue;
+            // Backfill flat inpatient/outpatient fields from healthLimits for backward compat
+            let backfilledInpatient = benefit.healthInpatientLimit ?? null;
+            let backfilledOutpatient = benefit.healthOutpatientLimit ?? null;
+            const hlArray = benefit.healthLimits ?? [];
+            for (const hl of hlArray) {
+              if (hl.limitType === "INPATIENT" && hl.hasLimit && hl.limitAmount !== null) {
+                backfilledInpatient = hl.limitAmount;
+              }
+              if (hl.limitType === "OUTPATIENT" && hl.hasLimit && hl.limitAmount !== null) {
+                backfilledOutpatient = hl.limitAmount;
+              }
+            }
+
             benefitEntries.push({
+              data: {
               companyId,
               benefitCategory: category as BenefitCategory,
               country,
@@ -216,8 +237,8 @@ export async function POST(req: NextRequest) {
               healthExcess: benefit.healthExcess ?? null,
               healthExcessCurrency: benefit.healthExcessCurrency || "EUR",
               healthCopayPercent: benefit.healthCopayPercent ?? null,
-              healthInpatientLimit: benefit.healthInpatientLimit ?? null,
-              healthOutpatientLimit: benefit.healthOutpatientLimit ?? null,
+              healthInpatientLimit: backfilledInpatient,
+              healthOutpatientLimit: backfilledOutpatient,
               healthLimitCurrency: benefit.healthLimitCurrency || "EUR",
               lifeCoverMultiple: benefit.lifeCoverMultiple ?? null,
               lifeFixedCoverAmount: benefit.lifeFixedCoverAmount ?? null,
@@ -238,6 +259,13 @@ export async function POST(req: NextRequest) {
               brokerSatisfactionScore: benefit.brokerSatisfactionScore ?? null,
               renewalDate: benefit.renewalDate ? new Date(benefit.renewalDate) : null,
               benefitSatisfactionScore: benefit.benefitSatisfactionScore ?? null,
+              },
+              healthLimits: hlArray.map((hl) => ({
+                limitType: hl.limitType === "CUSTOM" ? hl.customLimitName : hl.limitType,
+                hasLimit: hl.hasLimit,
+                limitAmount: hl.hasLimit ? hl.limitAmount : null,
+                limitCurrency: hl.limitCurrency || "EUR",
+              })),
             });
           }
         }
@@ -250,7 +278,21 @@ export async function POST(req: NextRequest) {
           if (catData.notOffered) continue;
           for (const benefit of catData.benefits) {
             if (!benefit.benefitName || !benefit.coverLevel) continue;
+
+            let backfilledInpatient3 = benefit.healthInpatientLimit ?? null;
+            let backfilledOutpatient3 = benefit.healthOutpatientLimit ?? null;
+            const hlArray3 = benefit.healthLimits ?? [];
+            for (const hl of hlArray3) {
+              if (hl.limitType === "INPATIENT" && hl.hasLimit && hl.limitAmount !== null) {
+                backfilledInpatient3 = hl.limitAmount;
+              }
+              if (hl.limitType === "OUTPATIENT" && hl.hasLimit && hl.limitAmount !== null) {
+                backfilledOutpatient3 = hl.limitAmount;
+              }
+            }
+
             benefitEntries.push({
+              data: {
               companyId,
               benefitCategory: category as BenefitCategory,
               country,
@@ -274,8 +316,8 @@ export async function POST(req: NextRequest) {
               healthExcess: benefit.healthExcess ?? null,
               healthExcessCurrency: benefit.healthExcessCurrency || "EUR",
               healthCopayPercent: benefit.healthCopayPercent ?? null,
-              healthInpatientLimit: benefit.healthInpatientLimit ?? null,
-              healthOutpatientLimit: benefit.healthOutpatientLimit ?? null,
+              healthInpatientLimit: backfilledInpatient3,
+              healthOutpatientLimit: backfilledOutpatient3,
               healthLimitCurrency: benefit.healthLimitCurrency || "EUR",
               lifeCoverMultiple: benefit.lifeCoverMultiple ?? null,
               lifeFixedCoverAmount: benefit.lifeFixedCoverAmount ?? null,
@@ -296,13 +338,33 @@ export async function POST(req: NextRequest) {
               brokerSatisfactionScore: benefit.brokerSatisfactionScore ?? null,
               renewalDate: benefit.renewalDate ? new Date(benefit.renewalDate) : null,
               benefitSatisfactionScore: benefit.benefitSatisfactionScore ?? null,
+              },
+              healthLimits: hlArray3.map((hl) => ({
+                limitType: hl.limitType === "CUSTOM" ? hl.customLimitName : hl.limitType,
+                hasLimit: hl.hasLimit,
+                limitAmount: hl.hasLimit ? hl.limitAmount : null,
+                limitCurrency: hl.limitCurrency || "EUR",
+              })),
             });
           }
         }
       }
 
       for (const entry of benefitEntries) {
-        await tx.benefitEntry.create({ data: entry });
+        const created = await tx.benefitEntry.create({ data: entry.data });
+        if (entry.healthLimits.length > 0) {
+          for (const hl of entry.healthLimits) {
+            await tx.healthLimit.create({
+              data: {
+                benefitEntryId: created.id,
+                limitType: hl.limitType,
+                hasLimit: hl.hasLimit,
+                limitAmount: hl.limitAmount,
+                limitCurrency: hl.limitCurrency,
+              },
+            });
+          }
+        }
       }
 
       // 5. Delete + recreate CategoryExclusions with country

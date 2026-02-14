@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
       // Get benefit entries for this country
       const entries = await prisma.benefitEntry.findMany({
         where: { companyId: { in: Array.from(matchingIds) } },
-        include: { company: { select: { country: true } } },
+        include: { company: { select: { country: true } }, healthLimits: true },
       });
 
       const filtered = entries

@@ -267,6 +267,7 @@ model BenefitEntry {
   renewalDate                 DateTime?
   benefitSatisfactionScore    Int?            // 1-10
   complianceResults           ComplianceCheckResult[]
+  healthLimits                HealthLimit[]
   createdAt                   DateTime        @default(now())
   updatedAt                   DateTime        @updatedAt
 
@@ -275,6 +276,21 @@ model BenefitEntry {
   @@index([companyId, benefitCategory])
   @@index([companyId, country])
   @@index([companyId, country, benefitCategory])
+}
+
+model HealthLimit {
+  id             String       @id @default(cuid())
+  benefitEntryId String
+  benefitEntry   BenefitEntry @relation(fields: [benefitEntryId], references: [id], onDelete: Cascade)
+  limitType      String       // "INPATIENT", "OUTPATIENT", "DENTAL", "MENTAL_HEALTH", "OPTICAL", "MATERNITY", or custom
+  hasLimit       Boolean      // true = capped, false = full cover
+  limitAmount    Float?       // only when hasLimit = true
+  limitCurrency  String       @default("EUR")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([benefitEntryId, limitType])
+  @@index([benefitEntryId])
 }
 
 model PlatformInfo {

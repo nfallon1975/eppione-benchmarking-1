@@ -45,6 +45,12 @@ const updateBenefitSchema = z.object({
   healthInpatientLimit: z.number().nullable().optional(),
   healthOutpatientLimit: z.number().nullable().optional(),
   healthLimitCurrency: z.string().optional(),
+  healthLimits: z.array(z.object({
+    limitType: z.string().min(1),
+    hasLimit: z.boolean(),
+    limitAmount: z.number().nullable(),
+    limitCurrency: z.string().optional().default("EUR"),
+  })).optional(),
   lifeCoverMultiple: z.number().nullable().optional(),
   lifeFixedCoverAmount: z.number().nullable().optional(),
   lifeCoverAmountCurrency: z.string().optional(),
@@ -114,7 +120,7 @@ export async function PUT(
     const body = await req.json();
     const data = updateBenefitSchema.parse(body);
 
-    const { renewalDate, ...restData } = data;
+    const { renewalDate, healthLimits: healthLimitsData, ...restData } = data;
     const benefit = await prisma.benefitEntry.update({
       where: { id },
       data: {
@@ -124,6 +130,22 @@ export async function PUT(
           : {}),
       },
     });
+
+    // Delete-and-recreate HealthLimit records if provided
+    if (healthLimitsData !== undefined) {
+      await prisma.healthLimit.deleteMany({ where: { benefitEntryId: id } });
+      for (const hl of healthLimitsData) {
+        await prisma.healthLimit.create({
+          data: {
+            benefitEntryId: id,
+            limitType: hl.limitType,
+            hasLimit: hl.hasLimit,
+            limitAmount: hl.hasLimit ? hl.limitAmount : null,
+            limitCurrency: hl.limitCurrency,
+          },
+        });
+      }
+    }
 
     return NextResponse.json(benefit);
   } catch (error) {

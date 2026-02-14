@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
         if (userCompanyId) {
           const myBenefits = await prisma.benefitEntry.findMany({
             where: { companyId: userCompanyId },
-            include: { company: { select: { country: true } } },
+            include: { company: { select: { country: true } }, healthLimits: true },
           });
           const myFiltered = myBenefits
             .filter((e) => {
@@ -224,7 +224,7 @@ export async function GET(req: NextRequest) {
         if (userCompanyId) {
           const myBenefits = await prisma.benefitEntry.findMany({
             where: { companyId: userCompanyId },
-            include: { company: { select: { country: true } } },
+            include: { company: { select: { country: true } }, healthLimits: true },
           });
           const myFiltered = myBenefits
             .filter((e) => {
@@ -304,6 +304,7 @@ export async function GET(req: NextRequest) {
       },
       include: {
         company: { select: { country: true } },
+        healthLimits: true,
       },
     });
 

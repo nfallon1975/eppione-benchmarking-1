@@ -4,6 +4,7 @@ import type {
   CategoryBenchmark,
   PercentileStats,
   HealthCategoryStats,
+  HealthLimitTypeStats,
   LifeCategoryStats,
   IpCategoryStats,
   PensionCategoryStats,
@@ -128,12 +129,36 @@ export async function buildReferenceCategories(
             )
           : null;
 
+      // Convert flat inpatient/outpatient into limitTypeStats for new display
+      const limitTypeStats: HealthLimitTypeStats[] = [];
+      if (inpatientStats) {
+        limitTypeStats.push({
+          limitType: "INPATIENT",
+          limitTypeLabel: "Inpatient",
+          totalCompanies: 0,
+          companiesWithLimit: 0,
+          companiesFullCover: 0,
+          limitStats: inpatientStats,
+        });
+      }
+      if (outpatientStats) {
+        limitTypeStats.push({
+          limitType: "OUTPATIENT",
+          limitTypeLabel: "Outpatient",
+          totalCompanies: 0,
+          companiesWithLimit: 0,
+          companiesFullCover: 0,
+          limitStats: outpatientStats,
+        });
+      }
+
       if (excessStats || copayStats || inpatientStats || outpatientStats) {
         healthStats = {
           excessStats,
           copayStats,
           inpatientLimitStats: inpatientStats,
           outpatientLimitStats: outpatientStats,
+          limitTypeStats,
         };
       }
     }

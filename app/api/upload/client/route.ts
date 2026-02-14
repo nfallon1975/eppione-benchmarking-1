@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
       // 3. Create new BenefitEntries
       for (const row of benefits) {
-        await tx.benefitEntry.create({
+        const createdEntry = await tx.benefitEntry.create({
           data: {
             companyId,
             benefitCategory: row.benefitCategory as BenefitCategory,
@@ -105,6 +105,15 @@ export async function POST(req: NextRequest) {
             pensionEmployeePct: row.pensionEmployeePct,
           },
         });
+        // Convert flat health limit fields to HealthLimit records
+        if (row.benefitCategory === "HEALTH") {
+          if (row.healthInpatientLimit != null) {
+            await tx.healthLimit.create({ data: { benefitEntryId: createdEntry.id, limitType: "INPATIENT", hasLimit: true, limitAmount: row.healthInpatientLimit, limitCurrency: row.costCurrency || "EUR" } });
+          }
+          if (row.healthOutpatientLimit != null) {
+            await tx.healthLimit.create({ data: { benefitEntryId: createdEntry.id, limitType: "OUTPATIENT", hasLimit: true, limitAmount: row.healthOutpatientLimit, limitCurrency: row.costCurrency || "EUR" } });
+          }
+        }
         entriesCreated++;
       }
 

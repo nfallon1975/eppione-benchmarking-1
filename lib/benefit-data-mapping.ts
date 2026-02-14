@@ -24,6 +24,7 @@ export function prismaEntryToCompanyBenefitData(
     healthInpatientLimit: number | null;
     healthOutpatientLimit: number | null;
     healthLimitCurrency: string;
+    healthLimits?: { limitType: string; hasLimit: boolean; limitAmount: number | null; limitCurrency: string }[];
     lifeCoverMultiple: number | null;
     lifeFixedCoverAmount: number | null;
     lifeCoverAmountCurrency: string;
@@ -62,6 +63,12 @@ export function prismaEntryToCompanyBenefitData(
     healthInpatientLimit: e.healthInpatientLimit,
     healthOutpatientLimit: e.healthOutpatientLimit,
     healthLimitCurrency: e.healthLimitCurrency,
+    healthLimits: (e.healthLimits ?? []).map((hl) => ({
+      limitType: hl.limitType,
+      hasLimit: hl.hasLimit,
+      limitAmount: hl.limitAmount,
+      limitCurrency: hl.limitCurrency,
+    })),
     lifeCoverMultiple: e.lifeCoverMultiple,
     lifeFixedCoverAmount: e.lifeFixedCoverAmount,
     lifeCoverAmountCurrency: e.lifeCoverAmountCurrency,
