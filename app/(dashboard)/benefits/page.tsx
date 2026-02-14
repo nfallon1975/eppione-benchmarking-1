@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { BENEFIT_CATEGORY_LABELS, formatCurrency } from "@/lib/utils";
-import { getCountryName, getCurrencyForCountry } from "@/lib/countries";
+import { getCountryName, getCurrencyForCountry, COUNTRY_LIST } from "@/lib/countries";
 import { HealthLimitsEditor } from "@/components/survey/health-limits-editor";
 import type { HealthLimitFormData } from "@/lib/survey-types";
 
@@ -533,26 +533,24 @@ export default function BenefitsPage() {
                 {error}
               </div>
             )}
-            {countries.length >= 1 && (
-              <div className="space-y-2">
-                <Label>Country</Label>
-                <Select
-                  value={formData.country}
-                  onValueChange={handleCountryChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countries.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {getCountryName(c)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label>Country</Label>
+              <Select
+                value={formData.country}
+                onValueChange={handleCountryChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRY_LIST.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Benefit Category</Label>
