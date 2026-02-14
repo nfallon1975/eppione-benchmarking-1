@@ -252,6 +252,17 @@ export function BenefitHealthScoreCard() {
               >
                 {data.band.label}
               </span>
+              {data.breakdown.missingCategories > 0 && (
+                <div className="mt-3 text-center">
+                  <p className="text-xs text-slate-500">
+                    Score for offered benefits: <span className="font-semibold text-slate-700">{data.breakdown.offeredAvg}/100</span>
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-400">
+                    Overall score reduced by {data.breakdown.missingCategories} missing
+                    {data.breakdown.missingCategories === 1 ? " category" : " categories"}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Strongest */}

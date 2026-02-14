@@ -25,9 +25,12 @@ export interface CategoryHealthScore {
 
 export interface ScoreBreakdown {
   totalCategoriesOffered: number;
+  totalCategoriesInMarket: number;
+  missingCategories: number;
   marketAvgCategoriesOffered: number;
   bonusPoints: number;
   weightedAvg: number;
+  offeredAvg: number;
 }
 
 export interface BenefitHealthScoreResult {
@@ -340,9 +343,12 @@ export function calculateBenefitHealthScore(
       categoryScores: [],
       breakdown: {
         totalCategoriesOffered: 0,
+        totalCategoriesInMarket: 0,
+        missingCategories: 0,
         marketAvgCategoriesOffered: 0,
         bonusPoints: 0,
         weightedAvg: 0,
+        offeredAvg: 0,
       },
     };
   }
@@ -372,17 +378,27 @@ export function calculateBenefitHealthScore(
     });
   }
 
-  // Weighted average by prevalence
+  // Weighted average by prevalence (all categories, including missing)
   let weightedSum = 0;
   let weightTotal = 0;
+
+  // Weighted average of only offered categories
+  let offeredWeightedSum = 0;
+  let offeredWeightTotal = 0;
 
   for (let i = 0; i < categories.length; i++) {
     const weight = Math.max(categories[i].prevalence, 1); // min weight 1 to avoid zero
     weightedSum += categoryScores[i].total * weight;
     weightTotal += weight;
+
+    if (categoryScores[i].offered) {
+      offeredWeightedSum += categoryScores[i].total * weight;
+      offeredWeightTotal += weight;
+    }
   }
 
   const weightedAvg = weightTotal > 0 ? weightedSum / weightTotal : 0;
+  const offeredAvg = offeredWeightTotal > 0 ? offeredWeightedSum / offeredWeightTotal : 0;
 
   // Bonus: categories offered beyond market average count
   const totalCategoriesOffered = categoryScores.filter((c) => c.offered).length;
@@ -409,9 +425,12 @@ export function calculateBenefitHealthScore(
     categoryScores,
     breakdown: {
       totalCategoriesOffered,
+      totalCategoriesInMarket: categories.length,
+      missingCategories: categories.length - totalCategoriesOffered,
       marketAvgCategoriesOffered: Math.round(marketAvgCategoriesOffered),
       bonusPoints,
       weightedAvg: Math.round(weightedAvg),
+      offeredAvg: Math.round(offeredAvg),
     },
   };
 }

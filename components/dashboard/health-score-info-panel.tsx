@@ -166,9 +166,17 @@ export function HealthScoreInfoPanel({
               Overall Score
             </h3>
             <div className="space-y-1 rounded-md border p-3 text-sm">
+              {breakdown.missingCategories > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-slate-600">
+                    Average for offered benefits only ({breakdown.totalCategoriesOffered} of {breakdown.totalCategoriesInMarket} categories)
+                  </span>
+                  <span className="font-medium text-green-600">{breakdown.offeredAvg}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-slate-600">
-                  Weighted average (by market prevalence)
+                  Weighted average across all market categories
                 </span>
                 <span className="font-medium">{breakdown.weightedAvg}</span>
               </div>
@@ -188,6 +196,15 @@ export function HealthScoreInfoPanel({
                 </span>
               </div>
             </div>
+            {breakdown.missingCategories > 0 && (
+              <p className="mt-2 text-xs text-slate-500">
+                Your overall score includes {breakdown.missingCategories} benefit
+                {breakdown.missingCategories === 1 ? " category" : " categories"} offered
+                by peers that you don&apos;t currently offer. These score 0 and
+                bring down the weighted average. Adding benefits in these
+                categories will improve your overall score.
+              </p>
+            )}
           </div>
 
           {/* Score bands legend */}
