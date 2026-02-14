@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { BENEFIT_CATEGORY_LABELS, formatCurrency } from "@/lib/utils";
+import { getCountryName, getCurrencyForCountry } from "@/lib/countries";
 import { HealthLimitsEditor } from "@/components/survey/health-limits-editor";
 import type { HealthLimitFormData } from "@/lib/survey-types";
 
@@ -158,7 +159,18 @@ export default function BenefitsPage() {
   }, []);
 
   function openNew() {
-    setFormData(emptyForm);
+    const defaultCountry = countries.length >= 1 ? countries[0] : "";
+    const currency = defaultCountry ? getCurrencyForCountry(defaultCountry) : "EUR";
+    setFormData({
+      ...emptyForm,
+      country: defaultCountry,
+      costCurrency: currency,
+      healthExcessCurrency: currency,
+      healthLimitCurrency: currency,
+      lifeCoverAmountCurrency: currency,
+      ciCoverAmountCurrency: currency,
+      dentalAnnualLimitCurrency: currency,
+    });
     setEditingId(null);
     setError(null);
     setDialogOpen(true);
@@ -359,7 +371,22 @@ export default function BenefitsPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }
 
-  const currencies = ["EUR", "GBP", "USD", "AED", "SGD", "AUD"];
+  function handleCountryChange(country: string) {
+    const currency = getCurrencyForCountry(country);
+    setFormData((prev) => ({
+      ...prev,
+      country,
+      costCurrency: currency,
+      healthExcessCurrency: currency,
+      healthLimitCurrency: currency,
+      lifeCoverAmountCurrency: currency,
+      ciCoverAmountCurrency: currency,
+      dentalAnnualLimitCurrency: currency,
+    }));
+  }
+
+  const countryCurrency = formData.country ? getCurrencyForCountry(formData.country) : null;
+  const currencies = Array.from(new Set(["EUR", "GBP", "USD", "AED", "SGD", "AUD", ...(countryCurrency ? [countryCurrency] : [])]));
 
   if (loading) {
     return (
@@ -423,7 +450,7 @@ export default function BenefitsPage() {
                     </TableCell>
                     <TableCell>
                       <span className="text-xs text-slate-600">
-                        {benefit.country || "—"}
+                        {benefit.country ? getCountryName(benefit.country) : "—"}
                       </span>
                     </TableCell>
                     <TableCell className="font-medium">
@@ -506,12 +533,12 @@ export default function BenefitsPage() {
                 {error}
               </div>
             )}
-            {countries.length > 1 && (
+            {countries.length >= 1 && (
               <div className="space-y-2">
                 <Label>Country</Label>
                 <Select
                   value={formData.country}
-                  onValueChange={(v) => updateField("country", v)}
+                  onValueChange={handleCountryChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select country" />
@@ -519,7 +546,7 @@ export default function BenefitsPage() {
                   <SelectContent>
                     {countries.map((c) => (
                       <SelectItem key={c} value={c}>
-                        {c}
+                        {getCountryName(c)}
                       </SelectItem>
                     ))}
                   </SelectContent>
