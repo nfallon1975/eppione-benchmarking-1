@@ -1,16 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { companyId } = session.user;
+    const isAdmin = session.user.role === "ADMIN";
+    const overrideCompanyId = req.nextUrl.searchParams.get("companyId");
+    const companyId = isAdmin && overrideCompanyId ? overrideCompanyId : session.user.companyId;
     if (!companyId) {
       return NextResponse.json({ error: "No company associated" }, { status: 400 });
     }

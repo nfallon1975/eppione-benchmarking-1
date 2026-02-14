@@ -52,6 +52,7 @@ import {
   UserPlus,
   Mail,
   Building,
+  Pencil,
 } from "lucide-react";
 import { BENEFIT_CATEGORY_LABELS, COUNTRY_LABELS } from "@/lib/utils";
 
@@ -800,6 +801,15 @@ export default function AdminPage() {
                             <span className="text-xs text-slate-400">
                               {companyUsers.length} user{companyUsers.length !== 1 ? "s" : ""}
                             </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="ml-auto text-xs"
+                              onClick={() => router.push(`/admin/clients/${company.id}/benefits?name=${encodeURIComponent(company.name)}`)}
+                            >
+                              <Pencil className="mr-1 h-3 w-3" />
+                              Edit Benefits
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>

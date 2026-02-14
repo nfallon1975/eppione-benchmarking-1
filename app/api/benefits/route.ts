@@ -67,7 +67,7 @@ const createBenefitSchema = z.object({
   benefitSatisfactionScore: z.number().int().min(1).max(10).nullable().optional(),
 });
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -78,7 +78,9 @@ export async function GET() {
       );
     }
 
-    const { companyId } = session.user;
+    const isAdmin = session.user.role === "ADMIN";
+    const overrideCompanyId = req.nextUrl.searchParams.get("companyId");
+    const companyId = isAdmin && overrideCompanyId ? overrideCompanyId : session.user.companyId;
 
     if (!companyId) {
       return NextResponse.json(
@@ -113,7 +115,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { companyId } = session.user;
+    const isAdmin = session.user.role === "ADMIN";
+    const overrideCompanyId = req.nextUrl.searchParams.get("companyId");
+    const companyId = isAdmin && overrideCompanyId ? overrideCompanyId : session.user.companyId;
 
     if (!companyId) {
       return NextResponse.json(
@@ -122,17 +126,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify the user belongs to the company
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { companyId: true },
-    });
+    // Verify the user belongs to the company (skip for admins)
+    if (!isAdmin) {
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { companyId: true },
+      });
 
-    if (!user || user.companyId !== companyId) {
-      return NextResponse.json(
-        { error: "You do not belong to this company" },
-        { status: 403 }
-      );
+      if (!user || user.companyId !== companyId) {
+        return NextResponse.json(
+          { error: "You do not belong to this company" },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await req.json();

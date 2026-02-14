@@ -80,9 +80,10 @@ export async function PUT(
       );
     }
 
+    const isAdmin = session.user.role === "ADMIN";
     const { companyId } = session.user;
 
-    if (!companyId) {
+    if (!isAdmin && !companyId) {
       return NextResponse.json(
         { error: "No company associated with this account" },
         { status: 404 }
@@ -91,7 +92,7 @@ export async function PUT(
 
     const { id } = params;
 
-    // Verify the benefit belongs to the user's company
+    // Verify the benefit belongs to the user's company (admins can edit any)
     const existingBenefit = await prisma.benefitEntry.findUnique({
       where: { id },
     });
@@ -103,7 +104,7 @@ export async function PUT(
       );
     }
 
-    if (existingBenefit.companyId !== companyId) {
+    if (!isAdmin && existingBenefit.companyId !== companyId) {
       return NextResponse.json(
         { error: "You do not have permission to update this benefit" },
         { status: 403 }
@@ -154,9 +155,10 @@ export async function DELETE(
       );
     }
 
+    const isAdmin = session.user.role === "ADMIN";
     const { companyId } = session.user;
 
-    if (!companyId) {
+    if (!isAdmin && !companyId) {
       return NextResponse.json(
         { error: "No company associated with this account" },
         { status: 404 }
@@ -165,7 +167,7 @@ export async function DELETE(
 
     const { id } = params;
 
-    // Verify the benefit belongs to the user's company
+    // Verify the benefit belongs to the user's company (admins can delete any)
     const existingBenefit = await prisma.benefitEntry.findUnique({
       where: { id },
     });
@@ -177,7 +179,7 @@ export async function DELETE(
       );
     }
 
-    if (existingBenefit.companyId !== companyId) {
+    if (!isAdmin && existingBenefit.companyId !== companyId) {
       return NextResponse.json(
         { error: "You do not have permission to delete this benefit" },
         { status: 403 }
