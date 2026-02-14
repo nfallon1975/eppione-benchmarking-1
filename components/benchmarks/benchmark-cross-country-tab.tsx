@@ -25,6 +25,7 @@ interface CrossCountryData {
 
 interface BenchmarkCrossCountryTabProps {
   currency: string;
+  companyId?: string;
 }
 
 const COUNTRY_COLORS: Record<string, string> = {
@@ -36,7 +37,7 @@ const COUNTRY_COLORS: Record<string, string> = {
   NL: "#5B8DEE",
 };
 
-export function BenchmarkCrossCountryTab({ currency }: BenchmarkCrossCountryTabProps) {
+export function BenchmarkCrossCountryTab({ currency, companyId }: BenchmarkCrossCountryTabProps) {
   const [data, setData] = useState<CrossCountryData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +45,9 @@ export function BenchmarkCrossCountryTab({ currency }: BenchmarkCrossCountryTabP
     async function load() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/benchmarking/cross-country?currency=${currency}`);
+        let url = `/api/benchmarking/cross-country?currency=${currency}`;
+        if (companyId) url += `&companyId=${encodeURIComponent(companyId)}`;
+        const res = await fetch(url);
         if (res.ok) {
           setData(await res.json());
         }
@@ -55,7 +58,7 @@ export function BenchmarkCrossCountryTab({ currency }: BenchmarkCrossCountryTabP
       }
     }
     load();
-  }, [currency]);
+  }, [currency, companyId]);
 
   if (loading) {
     return <p className="py-8 text-center text-sm text-slate-500">Loading cross-country data...</p>;

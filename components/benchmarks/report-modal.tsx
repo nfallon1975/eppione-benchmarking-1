@@ -35,6 +35,7 @@ interface ReportModalProps {
   industry: string;
   currency: string;
   companyName: string;
+  companyId?: string;
 }
 
 const STATUS_MESSAGES = [
@@ -53,6 +54,7 @@ export function ReportModal({
   industry,
   currency,
   companyName,
+  companyId,
 }: ReportModalProps) {
   const [reportType, setReportType] = useState<"single" | "global">(
     countries.length > 1 ? "single" : "single"
@@ -96,6 +98,7 @@ export function ReportModal({
         for (const c of countries) {
           const params = new URLSearchParams({ country: c, currency });
           if (industry) params.set("industry", industry);
+          if (companyId) params.set("companyId", companyId);
           const res = await fetch(`/api/benchmarking?${params}`);
           if (res.ok) {
             allCountryData[c] = await res.json();
@@ -105,13 +108,16 @@ export function ReportModal({
         singleCountryData = allCountryData[countries[0]] || null;
 
         // Fetch cross-country data
-        const crossRes = await fetch(`/api/benchmarking/cross-country?currency=${currency}`);
+        let crossUrl = `/api/benchmarking/cross-country?currency=${currency}`;
+        if (companyId) crossUrl += `&companyId=${encodeURIComponent(companyId)}`;
+        const crossRes = await fetch(crossUrl);
         if (crossRes.ok) {
           crossCountryData = await crossRes.json();
         }
       } else {
         const params = new URLSearchParams({ country: selectedCountry, currency });
         if (industry) params.set("industry", industry);
+        if (companyId) params.set("companyId", companyId);
         const res = await fetch(`/api/benchmarking?${params}`);
         if (res.ok) {
           singleCountryData = await res.json();

@@ -12,18 +12,29 @@ import { prismaEntryToCompanyBenefitData } from "@/lib/benefit-data-mapping";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !session.user.companyId) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const currency = searchParams.get("currency") || "EUR";
+    const overrideCompanyId = searchParams.get("companyId");
+
+    // Admin override: allow viewing cross-country data for any company
+    const effectiveCompanyId =
+      session.user.role === "ADMIN" && overrideCompanyId
+        ? overrideCompanyId
+        : session.user.companyId;
+
+    if (!effectiveCompanyId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const rates = await loadCurrencyRates();
 
     // Get user's company and its countries
     const company = await prisma.company.findUnique({
-      where: { id: session.user.companyId },
+      where: { id: effectiveCompanyId },
       include: {
         countryProfiles: true,
         benefitEntries: true,

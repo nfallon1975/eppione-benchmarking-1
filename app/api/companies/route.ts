@@ -19,7 +19,7 @@ const updateCompanySchema = z.object({
   desiredNewBenefits: z.string().nullable().optional(),
 });
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -30,7 +30,13 @@ export async function GET() {
       );
     }
 
-    const { companyId } = session.user;
+    // Admin override: allow fetching any company by ID
+    const { searchParams } = new URL(req.url);
+    const overrideCompanyId = searchParams.get("companyId");
+    const companyId =
+      session.user.role === "ADMIN" && overrideCompanyId
+        ? overrideCompanyId
+        : session.user.companyId;
 
     if (!companyId) {
       // Return an empty shell so the company profile page can render the form

@@ -805,6 +805,15 @@ export default function AdminPage() {
                               size="sm"
                               variant="outline"
                               className="ml-auto text-xs"
+                              onClick={() => router.push(`/admin/clients/${company.id}/benchmarking?name=${encodeURIComponent(company.name)}`)}
+                            >
+                              <BarChart3 className="mr-1 h-3 w-3" />
+                              View Benchmarks
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
                               onClick={() => router.push(`/admin/clients/${company.id}/benefits?name=${encodeURIComponent(company.name)}`)}
                             >
                               <Pencil className="mr-1 h-3 w-3" />

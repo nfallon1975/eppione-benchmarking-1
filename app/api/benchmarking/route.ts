@@ -34,9 +34,22 @@ export async function GET(req: NextRequest) {
     const grouping = (searchParams.get("grouping") || "country_industry") as BenchmarkGrouping;
     const currency = searchParams.get("currency");
 
+    // Admin override: allow viewing benchmarks for any company
+    const overrideCompanyId = searchParams.get("companyId");
+
     // CLIENT users are locked to their company's industry
+    // ADMIN users can override to view as a specific company
     let userCompanyId: string | null = null;
-    if (session.user.role === "CLIENT" && session.user.companyId) {
+    if (session.user.role === "ADMIN" && overrideCompanyId) {
+      userCompanyId = overrideCompanyId;
+      const company = await prisma.company.findUnique({
+        where: { id: overrideCompanyId },
+        select: { industry: true },
+      });
+      if (company?.industry) {
+        industry = company.industry;
+      }
+    } else if (session.user.role === "CLIENT" && session.user.companyId) {
       userCompanyId = session.user.companyId;
       const company = await prisma.company.findUnique({
         where: { id: session.user.companyId },
