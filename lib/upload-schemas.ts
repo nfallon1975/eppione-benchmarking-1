@@ -38,7 +38,7 @@ export const clientBenefitRowSchema = z.object({
   coversDependents: z.preprocess((v) => v === "" || v === undefined || v === null ? false : parseBool(v), z.boolean()).default(false),
   costCurrency: z.preprocess((v) => v === "" || v === undefined || v === null ? "EUR" : String(v).toUpperCase(), z.string()).default("EUR"),
   // Optional numeric
-  annualCostPerEmployee: z.preprocess(parseNumber, z.number().positive().nullable()).default(null),
+  annualCostPerEmployee: z.preprocess(parseNumber, z.number().min(0).nullable()).default(null),
   employeeContributionPercent: z.preprocess(parseNumber, z.number().min(0).max(100).nullable()).default(null),
   // Category-specific optional
   healthExcess: z.preprocess(parseNumber, z.number().nullable()).default(null),

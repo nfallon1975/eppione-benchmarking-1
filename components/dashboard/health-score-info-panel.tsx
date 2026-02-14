@@ -74,12 +74,13 @@ export function HealthScoreInfoPanel({
                   </tr>
                   <tr className="border-b">
                     <td className="px-3 py-2 font-medium">
-                      Cost Competitiveness
+                      Cost Efficiency
                     </td>
                     <td className="px-3 py-2 text-center">25</td>
                     <td className="px-3 py-2 text-slate-600">
-                      Based on your spending percentile vs peers — higher
-                      investment means stronger benefits
+                      Measures value for money — achieving strong plan richness
+                      at lower cost scores highest. Adjusted for workforce
+                      demographics when data is available.
                     </td>
                   </tr>
                   <tr className="border-b">

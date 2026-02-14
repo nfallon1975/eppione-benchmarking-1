@@ -36,7 +36,7 @@ const updateBenefitSchema = z.object({
   isCore: z.boolean().optional(),
   isVoluntary: z.boolean().optional(),
   provider: z.string().nullable().optional(),
-  annualCostPerEmployee: z.number().positive().nullable().optional(),
+  annualCostPerEmployee: z.number().min(0).nullable().optional(),
   costCurrency: z.string().min(1).optional(),
   notes: z.string().nullable().optional(),
   healthExcess: z.number().nullable().optional(),

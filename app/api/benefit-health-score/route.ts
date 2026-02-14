@@ -14,6 +14,7 @@ import type {
 } from "@/lib/benchmarking-types";
 import { prismaEntryToCompanyBenefitData } from "@/lib/benefit-data-mapping";
 import { calculateBenefitHealthScore } from "@/lib/benefit-health-score";
+import type { DemographicContext } from "@/lib/benefit-health-score";
 import { buildReferenceCategories } from "@/lib/reference-benchmarking";
 
 export async function GET(req: NextRequest) {
@@ -34,6 +35,16 @@ export async function GET(req: NextRequest) {
         country: true,
         industry: true,
         employeeCountRange: true,
+        averageWorkforceAge: true,
+        averageSalary: true,
+        averageSalaryCurrency: true,
+        countryProfiles: {
+          select: {
+            country: true,
+            averageSalary: true,
+            averageSalaryCurrency: true,
+          },
+        },
       },
     });
 
@@ -79,6 +90,16 @@ export async function GET(req: NextRequest) {
             employeeCount: true,
             employeeCountRange: true,
             surveyCompletedAt: true,
+            averageWorkforceAge: true,
+            averageSalary: true,
+            averageSalaryCurrency: true,
+            countryProfiles: {
+              select: {
+                country: true,
+                averageSalary: true,
+                averageSalaryCurrency: true,
+              },
+            },
           },
         })
       : [];
@@ -128,6 +149,77 @@ export async function GET(req: NextRequest) {
         return entryCountry === country || e.country === "";
       })
       .map((e) => prismaEntryToCompanyBenefitData(e));
+
+    // Build demographic context for cost efficiency scoring
+    const convertAmount = (
+      amount: number,
+      fromCurrency: string,
+      toCurrency: string,
+    ): number => {
+      if (fromCurrency === toCurrency) return amount;
+      const key = `${fromCurrency}_${toCurrency}`;
+      if (rates[key]) return amount * rates[key];
+      const inverseKey = `${toCurrency}_${fromCurrency}`;
+      if (rates[inverseKey]) return amount / rates[inverseKey];
+      return amount;
+    };
+
+    const buildDemographicContext = (
+      peerCompanyIds: Set<string>
+    ): DemographicContext | undefined => {
+      // Company's own salary: prefer country profile for the target country
+      const companyProfile = company!.countryProfiles.find(
+        (cp) => cp.country === country
+      );
+      const companySalaryRaw =
+        companyProfile?.averageSalary ?? company!.averageSalary;
+      const companySalaryCurrency =
+        companyProfile?.averageSalaryCurrency ??
+        company!.averageSalaryCurrency ??
+        targetCurrency;
+      const companySalary =
+        companySalaryRaw != null
+          ? convertAmount(companySalaryRaw, companySalaryCurrency, targetCurrency)
+          : null;
+
+      const companyAge = company!.averageWorkforceAge ?? null;
+
+      // Peer medians (from matching companies, excluding ourselves)
+      const peerCompanies = allCompanies.filter(
+        (c) => peerCompanyIds.has(c.id) && c.id !== companyId
+      );
+
+      // Collect peer ages
+      const peerAges = peerCompanies
+        .map((c) => c.averageWorkforceAge)
+        .filter((v): v is number => v != null);
+      const peerMedianAge = peerAges.length >= 3 ? median(peerAges) : null;
+
+      // Collect peer salaries (prefer country profile)
+      const peerSalaries = peerCompanies
+        .map((c) => {
+          const cp = c.countryProfiles.find((p) => p.country === country);
+          const sal = cp?.averageSalary ?? c.averageSalary;
+          const cur = cp?.averageSalaryCurrency ?? c.averageSalaryCurrency ?? targetCurrency;
+          return sal != null ? convertAmount(sal, cur, targetCurrency) : null;
+        })
+        .filter((v): v is number => v != null);
+      const peerMedianSalary = peerSalaries.length >= 3 ? median(peerSalaries) : null;
+
+      // Only return context if we have at least some useful data
+      if (companyAge === null && companySalary === null) return undefined;
+      if (peerMedianAge === null && peerMedianSalary === null) return undefined;
+
+      return { companyAge, companySalary, peerMedianAge, peerMedianSalary };
+    };
+
+    const median = (values: number[]): number => {
+      const sorted = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 0
+        ? (sorted[mid - 1] + sorted[mid]) / 2
+        : sorted[mid];
+    };
 
     if (matchingIds.size === 0) {
       // Fallback to reference data
@@ -197,11 +289,13 @@ export async function GET(req: NextRequest) {
       rates
     );
 
-    // Calculate health score
+    // Calculate health score (with demographic adjustment)
+    const demographics = buildDemographicContext(matchingIds);
     const score = calculateBenefitHealthScore(
       companyPositions,
       categories,
-      peerMyBenefits
+      peerMyBenefits,
+      demographics
     );
 
     // Data as of

@@ -44,6 +44,13 @@ export interface ScoreBand {
   max: number;
 }
 
+export interface DemographicContext {
+  companyAge: number | null;
+  companySalary: number | null;  // converted to target currency
+  peerMedianAge: number | null;
+  peerMedianSalary: number | null;  // in target currency
+}
+
 // ---------------------------------------------------------------------------
 // Score bands
 // ---------------------------------------------------------------------------
@@ -84,6 +91,32 @@ function getCompanyEntries(
 }
 
 // ---------------------------------------------------------------------------
+// Demographic adjustment
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns a multiplier (default 1.0) representing how much MORE expensive
+ * the company is expected to be relative to peers due to workforce demographics.
+ * A company with an older workforce or higher salaries is expected to pay more,
+ * so the adjustment factor > 1.0 lowers their effective cost rank.
+ */
+function computeDemographicAdjustment(demographics?: DemographicContext): number {
+  if (!demographics) return 1.0;
+
+  let ageFactor = 1.0;
+  if (demographics.companyAge !== null && demographics.peerMedianAge !== null && demographics.peerMedianAge > 0) {
+    ageFactor = Math.min(2.0, Math.max(0.5, demographics.companyAge / demographics.peerMedianAge));
+  }
+
+  let salaryFactor = 1.0;
+  if (demographics.companySalary !== null && demographics.peerMedianSalary !== null && demographics.peerMedianSalary > 0) {
+    salaryFactor = Math.min(2.0, Math.max(0.5, demographics.companySalary / demographics.peerMedianSalary));
+  }
+
+  return ageFactor * salaryFactor;
+}
+
+// ---------------------------------------------------------------------------
 // Dimension: Coverage (0-25)
 // ---------------------------------------------------------------------------
 
@@ -104,22 +137,39 @@ function scoreCoverage(
 }
 
 // ---------------------------------------------------------------------------
-// Dimension: Cost Competitiveness (0-25)
+// Dimension: Cost Efficiency (0-25)
 // ---------------------------------------------------------------------------
 
-function scoreCostCompetitiveness(
+function scoreCostEfficiency(
   position: CompanyPosition | undefined,
-  benchmark: CategoryBenchmark
+  benchmark: CategoryBenchmark,
+  planRichnessScore: number,
+  demographics?: DemographicContext
 ): number {
   if (!position || position.percentileRank === null) return 0;
   if (!benchmark.costStats) return 15; // no market data, give middle score
 
-  const rank = position.percentileRank;
+  const adjustment = computeDemographicAdjustment(demographics);
+  // Lower the effective rank for companies expected to pay more
+  const adjustedRank = Math.min(100, Math.max(0, position.percentileRank / adjustment));
 
-  // Higher spending = investing more in employees = better score
-  if (rank >= 50) return 25;  // at or above median
-  if (rank >= 25) return 15;  // between P25 and median
-  return 10;                  // below P25
+  const highRichness = planRichnessScore >= 20;
+  const lowCost = adjustedRank < 34;
+  const midCost = adjustedRank < 67;
+
+  //                        Adjusted Cost Rank
+  //                        Low (0-33)  Mid (34-66)  High (67-100)
+  // Plan Richness High:      25          20            15
+  //               Low:       18          10             5
+  if (highRichness) {
+    if (lowCost) return 25;
+    if (midCost) return 20;
+    return 15;
+  } else {
+    if (lowCost) return 18;
+    if (midCost) return 10;
+    return 5;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -280,7 +330,8 @@ function scoreBreadth(
 export function calculateBenefitHealthScore(
   companyPositions: CompanyPosition[],
   categories: CategoryBenchmark[],
-  companyBenefits: CompanyBenefitData[]
+  companyBenefits: CompanyBenefitData[],
+  demographics?: DemographicContext
 ): BenefitHealthScoreResult {
   if (categories.length === 0) {
     return {
@@ -304,8 +355,8 @@ export function calculateBenefitHealthScore(
     const entries = getCompanyEntries(bm.category, companyBenefits);
 
     const coverage = scoreCoverage(offered, bm.prevalence);
-    const cost = offered ? scoreCostCompetitiveness(position, bm) : 0;
     const planRichness = offered ? scorePlanRichness(bm.category, position, bm) : 0;
+    const cost = offered ? scoreCostEfficiency(position, bm, planRichness, demographics) : 0;
     const breadth = scoreBreadth(entries);
     const total = coverage + cost + planRichness + breadth;
 

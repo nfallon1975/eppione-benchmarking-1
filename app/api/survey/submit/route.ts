@@ -19,7 +19,7 @@ const benefitFormSchema = z.object({
   flexFundAmount: z.number().positive().nullable(),
   flexFundCurrency: z.string(),
   provider: z.string(),
-  annualCostPerEmployee: z.number().positive().nullable(),
+  annualCostPerEmployee: z.number().min(0).nullable(),
   costCurrency: z.string(),
   notes: z.string(),
   healthExcess: z.number().nullable().optional().default(null),
