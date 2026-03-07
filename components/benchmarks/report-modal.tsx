@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +54,13 @@ export function ReportModal({
 }: ReportModalProps) {
   const [reportType, setReportType] = useState<"single" | "global">("single");
   const [selectedCountry, setSelectedCountry] = useState(country);
+
+  // Sync selectedCountry when country prop changes (e.g. loaded async)
+  useEffect(() => {
+    if (country && !selectedCountry) {
+      setSelectedCountry(country);
+    }
+  }, [country, selectedCountry]);
   const [includeCost, setIncludeCost] = useState(true);
   const [includePlatform, setIncludePlatform] = useState(true);
   const [includeCompliance, setIncludeCompliance] = useState(true);
