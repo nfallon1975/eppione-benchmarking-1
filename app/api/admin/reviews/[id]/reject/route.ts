@@ -5,7 +5,8 @@ import { rejectFinding } from "@/lib/monthly-review";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);

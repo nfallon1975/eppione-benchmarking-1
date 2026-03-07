@@ -122,7 +122,7 @@ const STATUS_BADGE_CONFIG: Record<
 // ---------------------------------------------------------------------------
 
 export default function ImportPDFPage() {
-  const { data: session } = useSession();
+  useSession();
 
   // Upload form state
   const [file, setFile] = useState<File | null>(null);

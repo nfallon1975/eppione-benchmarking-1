@@ -50,7 +50,7 @@ export async function PATCH(
     );
   }
 
-  const updateData: any = { status };
+  const updateData: Record<string, unknown> = { status };
   if (adminEditedValue !== undefined) {
     updateData.adminEditedValue = parseFloat(adminEditedValue);
   }

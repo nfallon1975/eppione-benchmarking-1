@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
 
-  const where = status ? { status: status as any } : {};
+  const where = status ? { status: status as "UPLOADED" | "PROCESSING" | "REVIEW_READY" | "APPROVED" | "REJECTED" | "ERROR" } : {};
 
   const ingestions = await prisma.pDFIngestion.findMany({
     where,
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       sourceCountry,
       sourcePublisher,
       sourceYear: parseInt(sourceYear, 10),
-      sourceType: sourceType as any,
+      sourceType: sourceType as "INDUSTRY_SURVEY" | "INSURER_REPORT" | "GOVERNMENT_DATA" | "CONSULTANCY_REPORT" | "TRADE_BODY" | "OTHER",
       licenseNotes,
       processingCost: 0,
     },

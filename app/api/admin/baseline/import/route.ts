@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
 
       if (benchmarks.length > 0) {
         await tx.baselineBenchmark.createMany({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data: benchmarks.map((b: any) => ({ ...b, sourceId: newSource.id })),
         });
       }

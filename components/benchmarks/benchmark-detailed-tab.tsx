@@ -23,8 +23,8 @@ import { PercentileRangeInline } from "./percentile-range-chart";
 import { DonutChart, DonutLegend } from "./donut-chart";
 import { StackedSalaryBandChart } from "./stacked-salary-band-chart";
 import { ChartWrapper } from "./chart-wrapper";
-import type { BenchmarkResult, CategoryBenchmark, CompanyPosition, PercentileStats, PensionSalaryBandStats } from "@/lib/benchmarking-types";
-import { PLAN_TYPE_LABELS, DEATH_BENEFIT_TYPE_LABELS, PENSION_FORMULA_TYPE_LABELS, SALARY_BAND_LABELS } from "@/lib/benchmarking-types";
+import type { BenchmarkResult, CategoryBenchmark, CompanyPosition, PercentileStats } from "@/lib/benchmarking-types";
+import { PLAN_TYPE_LABELS, DEATH_BENEFIT_TYPE_LABELS, PENSION_FORMULA_TYPE_LABELS } from "@/lib/benchmarking-types";
 import { BENEFIT_CATEGORY_LABELS, formatCurrency, getPercentileColor, getPercentileBgColor, cn } from "@/lib/utils";
 import { BRAND } from "./chart-colors";
 

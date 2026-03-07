@@ -28,6 +28,7 @@ export async function GET() {
         statusCounts[f.status] = (statusCounts[f.status] || 0) + 1;
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { findings, ...rest } = cycle;
       return {
         ...rest,

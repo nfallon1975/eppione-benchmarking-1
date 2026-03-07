@@ -1265,6 +1265,7 @@ function MetricCard({
 
 function FindingCard({
   finding,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   cycleId,
   isReasoningExpanded,
   onToggleReasoning,

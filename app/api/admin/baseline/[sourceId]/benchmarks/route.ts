@@ -38,6 +38,7 @@ export async function POST(
     const items = Array.isArray(body) ? body : [body];
 
     const benchmarks = await prisma.baselineBenchmark.createMany({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: items.map((item: any) => ({ ...item, sourceId: params.sourceId })),
     });
 

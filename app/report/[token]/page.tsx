@@ -657,7 +657,7 @@ function RecommendationsPage({ data }: { data: ReportData }) {
           </div>
         ))}
         <div style={{ marginTop: 24, padding: 12, background: B.slate50, borderRadius: 6, fontSize: 9, color: B.slate500, lineHeight: 1.5 }}>
-          Note: These recommendations are based on market benchmarking data and should be considered alongside your organisation's specific circumstances, local regulations, and strategic objectives.
+          Note: These recommendations are based on market benchmarking data and should be considered alongside your organisation&apos;s specific circumstances, local regulations, and strategic objectives.
         </div>
       </PageWrapper>
       <PageBreak />
