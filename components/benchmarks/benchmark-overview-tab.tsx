@@ -114,9 +114,9 @@ export function BenchmarkOverviewTab({ data, countries }: BenchmarkOverviewTabPr
         <AnimatedStatCard
           label="Benefits Offered"
           value={yourBenefitEntryCount ?? 0}
-          comparison={`Across ${yourBenefitCount ?? 0} categories (market avg: ${avgBenefitsOffered})`}
+          comparison={`Across ${yourBenefitCount ?? 0} categories${avgBenefitsOffered > 0 ? ` (market avg: ${avgBenefitsOffered})` : ""}`}
           trend={
-            yourBenefitCount !== null
+            yourBenefitCount !== null && avgBenefitsOffered > 0
               ? yourBenefitCount >= avgBenefitsOffered ? "up" : "down"
               : "neutral"
           }
@@ -133,7 +133,7 @@ export function BenchmarkOverviewTab({ data, countries }: BenchmarkOverviewTabPr
           label="Platform Adoption"
           value={platform.adoptionRate}
           suffix="%"
-          comparison={`${platform.totalCompanies} companies in dataset`}
+          comparison={platform.totalCompanies > 0 ? `${platform.totalCompanies} companies in dataset` : "Not enough data"}
           accentColor={BRAND.highlight}
         />
       </div>
