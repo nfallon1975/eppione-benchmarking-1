@@ -61,6 +61,7 @@ export interface CrossCountryData {
 export interface ReportData {
   config: ReportConfig;
   singleCountryData: BenchmarkResult | null;
+  crossIndustryData: BenchmarkResult | null;
   allCountryData: Record<string, BenchmarkResult>;
   crossCountryData: CrossCountryData | null;
   charts: ReportCharts;

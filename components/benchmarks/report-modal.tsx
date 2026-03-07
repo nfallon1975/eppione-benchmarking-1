@@ -118,6 +118,19 @@ export function ReportModal({
         return;
       }
 
+      // Fetch cross-industry (all companies) data — same params but without industry
+      let crossIndustryData: BenchmarkResult | null = null;
+      try {
+        const crossIndustryCountry = isGlobal ? countries[0] : selectedCountry;
+        const ciParams = new URLSearchParams({ country: crossIndustryCountry, currency });
+        if (companyId) ciParams.set("companyId", companyId);
+        // Deliberately NOT setting industry to get all-companies data
+        const ciRes = await fetch(`/api/benchmarking?${ciParams}`);
+        if (ciRes.ok) crossIndustryData = await ciRes.json();
+      } catch (err) {
+        console.error("Failed to fetch cross-industry data:", err);
+      }
+
       // 2. Fetch compliance data
       let complianceData: ComplianceReportData | null = null;
       if (includeCompliance) {
@@ -157,6 +170,7 @@ export function ReportModal({
       const reportData: ReportData = {
         config,
         singleCountryData,
+        crossIndustryData,
         allCountryData,
         crossCountryData,
         charts: { radarChart: null, costBarChart: null, costPieChart: null, fundingChart: null, crossCountryChart: null },

@@ -80,6 +80,7 @@ export default function ReportRenderPage() {
       {data.config.reportType === "global" && <GlobalSummaryPage data={data} />}
       <PrevalencePage data={data} />
       <DetailedBenchmarkPages data={data} />
+      <AllCompaniesPage data={data} />
       {data.config.includeCostAnalysis && <CostAnalysisPage data={data} />}
       <PensionBenchmarkPage data={data} />
       {data.config.includePlatformBenchmarks && <PlatformPage data={data} />}
@@ -89,6 +90,7 @@ export default function ReportRenderPage() {
         return <CountrySection key={c} countryCode={c} benchmarkData={d} currency={data.config.currency} companyName={data.config.companyName} />;
       })}
       {data.config.reportType === "global" && data.recommendations.length > 0 && <RecommendationsPage data={data} />}
+      <DataSourcesPage data={data} />
       <MethodologyPage data={data} />
     </div>
   );
@@ -353,6 +355,86 @@ function DetailedBenchmarkPages({ data }: { data: ReportData }) {
             ];
           })}
         />
+      </PageWrapper>
+      <PageBreak />
+    </>
+  );
+}
+
+function AllCompaniesPage({ data }: { data: ReportData }) {
+  const bm = data.singleCountryData;
+  const ci = data.crossIndustryData;
+  if (!bm || !ci) return null;
+
+  const currency = data.config.currency;
+
+  // Build a unified list of categories present in either dataset
+  const allCategories = new Map<string, { industry: typeof bm.categories[0] | null; allCo: typeof ci.categories[0] | null }>();
+  for (const cat of bm.categories) {
+    allCategories.set(cat.category, { industry: cat, allCo: null });
+  }
+  for (const cat of ci.categories) {
+    const existing = allCategories.get(cat.category);
+    if (existing) {
+      existing.allCo = cat;
+    } else {
+      allCategories.set(cat.category, { industry: null, allCo: cat });
+    }
+  }
+
+  const rows: (string | React.ReactNode)[][] = [];
+  for (const [category, { industry, allCo }] of Array.from(allCategories.entries())) {
+    const pos = bm.companyPosition?.find((p) => p.category === category);
+    const yourCost = pos?.yourCostConverted ?? null;
+    const industryMedian = industry?.costStats?.median ?? null;
+    const allCoMedian = allCo?.costStats?.median ?? null;
+    const industryPrev = industry ? `${Math.round(industry.prevalence)}%` : "—";
+    const allCoPrev = allCo ? `${Math.round(allCo.prevalence)}%` : "—";
+
+    const costCell = (cost: number | null, median: number | null) => {
+      if (cost === null || cost === 0) return <span style={{ color: B.slate500 }}>{"—"}</span>;
+      if (median === null || median === 0) return <span style={{ color: B.cyan, fontWeight: 600 }}>{formatCurrency(cost, currency)}</span>;
+      const diff = cost - median;
+      const color = diff > 0 ? B.red : diff < 0 ? B.green : B.slate700;
+      return <span style={{ color, fontWeight: 600 }}>{formatCurrency(cost, currency)}</span>;
+    };
+
+    rows.push([
+      BENEFIT_CATEGORY_LABELS[category] || category,
+      industryPrev,
+      allCoPrev,
+      industryMedian !== null ? formatCurrency(industryMedian, currency) : "—",
+      allCoMedian !== null ? formatCurrency(allCoMedian, currency) : "—",
+      costCell(yourCost, industryMedian),
+    ]);
+  }
+
+  return (
+    <>
+      <PageWrapper companyName={data.config.companyName} label="All Companies Comparison">
+        <PageHeader title="All Companies Comparison" />
+        <p style={{ fontSize: 10, color: B.slate500, marginBottom: 6 }}>
+          Comparison of your benefits against your industry peers and all companies in {COUNTRY_LABELS[data.config.country] || data.config.country}.
+        </p>
+        <p style={{ fontSize: 9, color: B.slate500, marginBottom: 16 }}>
+          Industry: {NACE_INDUSTRIES[data.config.companyIndustry] || data.config.companyIndustry} ({bm.totalCompanies} companies) | All Companies: {ci.totalCompanies} companies
+        </p>
+
+        <DataTable
+          headers={["Category", "Industry Prevalence", "All Companies Prevalence", "Industry Median Cost", "All Companies Median Cost", "Your Cost"]}
+          rows={rows}
+        />
+
+        <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 9, color: B.slate500 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: B.green }} />
+            Below median
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: B.red }} />
+            Above median
+          </div>
+        </div>
       </PageWrapper>
       <PageBreak />
     </>
@@ -658,6 +740,113 @@ function RecommendationsPage({ data }: { data: ReportData }) {
         ))}
         <div style={{ marginTop: 24, padding: 12, background: B.slate50, borderRadius: 6, fontSize: 9, color: B.slate500, lineHeight: 1.5 }}>
           Note: These recommendations are based on market benchmarking data and should be considered alongside your organisation&apos;s specific circumstances, local regulations, and strategic objectives.
+        </div>
+      </PageWrapper>
+      <PageBreak />
+    </>
+  );
+}
+
+function DataSourcesPage({ data }: { data: ReportData }) {
+  const bm = data.singleCountryData;
+  if (!bm) return null;
+
+  const hasSources = bm.baselineSources && bm.baselineSources.length > 0;
+  const hasDataQuality = bm.dataQuality || bm.dataQualityMessage;
+  const categoriesWithMeta = bm.categories.filter(
+    (c) => c.sourceDescription || c.confidenceLevel || (c.sourceUrls && c.sourceUrls.length > 0)
+  );
+
+  // Don't render this page if there's nothing to show
+  if (!hasSources && !hasDataQuality && categoriesWithMeta.length === 0) return null;
+
+  const confidenceBadge = (level: string) => {
+    const colors: Record<string, { bg: string; text: string }> = {
+      HIGH: { bg: "#D1FAE5", text: B.green },
+      MEDIUM: { bg: "#FEF3C7", text: B.amber },
+      LOW: { bg: "#FEE2E2", text: B.red },
+    };
+    const c = colors[level.toUpperCase()] || colors.MEDIUM;
+    return (
+      <span style={{
+        display: "inline-block", padding: "2px 8px", borderRadius: 4,
+        fontSize: 8, fontWeight: 600, background: c.bg, color: c.text, textTransform: "uppercase",
+      }}>
+        {level}
+      </span>
+    );
+  };
+
+  return (
+    <>
+      <PageWrapper companyName={data.config.companyName} label="Data Sources & References">
+        <PageHeader title="Data Sources & References" />
+
+        {/* Data Quality Indicator */}
+        {hasDataQuality && (
+          <div style={{ marginBottom: 20, padding: "12px 16px", background: B.slate50, borderRadius: 8, borderLeft: `4px solid ${B.purple}` }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: B.navy, marginBottom: 4 }}>Data Quality</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {bm.dataQuality && confidenceBadge(bm.dataQuality === "industry" ? "HIGH" : bm.dataQuality === "cross_industry" ? "MEDIUM" : "MEDIUM")}
+              <span style={{ fontSize: 10, color: B.slate700 }}>
+                {bm.dataQualityMessage || (bm.dataQuality === "industry" ? "Industry-specific benchmark data" : bm.dataQuality === "cross_industry" ? "Cross-industry benchmark data" : "Reference benchmark data")}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Baseline Sources */}
+        {hasSources && (
+          <div style={{ marginBottom: 20 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: B.navy, marginBottom: 8, borderBottom: `2px solid ${B.purple}`, paddingBottom: 4 }}>
+              Baseline Data Sources
+            </h3>
+            {bm.baselineSources!.map((source, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                <span style={{ color: B.purple, fontSize: 11 }}>&bull;</span>
+                <span style={{ fontSize: 10, color: B.slate700, lineHeight: 1.5 }}>{source}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Per-category source details */}
+        {categoriesWithMeta.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: B.navy, marginBottom: 8, borderBottom: `2px solid ${B.purple}`, paddingBottom: 4 }}>
+              Category Data Sources
+            </h3>
+            <DataTable
+              headers={["Category", "Confidence", "Source", "References"]}
+              rows={categoriesWithMeta.map((cat) => [
+                BENEFIT_CATEGORY_LABELS[cat.category] || cat.category,
+                cat.confidenceLevel ? confidenceBadge(cat.confidenceLevel) : "—",
+                cat.sourceDescription || "—",
+                cat.sourceUrls && cat.sourceUrls.length > 0
+                  ? <span style={{ fontSize: 9, color: B.cyan, wordBreak: "break-all" as const }}>{cat.sourceUrls.join(", ")}</span>
+                  : "—",
+              ])}
+            />
+          </div>
+        )}
+
+        {/* Data Confidence Legend */}
+        <div style={{ marginTop: 16, padding: "16px 20px", background: B.slate50, borderRadius: 8 }}>
+          <h4 style={{ fontSize: 11, fontWeight: 700, color: B.navy, marginBottom: 10 }}>Data Confidence Levels</h4>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              {confidenceBadge("HIGH")}
+              <span style={{ fontSize: 10, color: B.slate700, lineHeight: 1.5 }}>Verified from multiple independent sources with strong sample sizes.</span>
+            </div>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              {confidenceBadge("MEDIUM")}
+              <span style={{ fontSize: 10, color: B.slate700, lineHeight: 1.5 }}>Based on a single reliable source or moderate sample size.</span>
+            </div>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              {confidenceBadge("LOW")}
+              <span style={{ fontSize: 10, color: B.slate700, lineHeight: 1.5 }}>Estimated or derived from limited data. Use with caution.</span>
+            </div>
+          </div>
         </div>
       </PageWrapper>
       <PageBreak />
