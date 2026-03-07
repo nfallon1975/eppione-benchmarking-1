@@ -268,6 +268,7 @@ export interface BenchmarkResult {
   avgSalary: number | null;
   categories: CategoryBenchmark[];
   companyPosition: CompanyPosition[] | null;
+  yourBenefitEntryCount?: number | null; // total individual benefit entries for this country
   platform: PlatformBenchmark;
   pensionSalaryBandStats?: PensionSalaryBandStats[];
   dataAsOf: string; // ISO date string of most recent surveyCompletedAt

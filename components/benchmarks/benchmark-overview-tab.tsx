@@ -26,7 +26,7 @@ interface BenchmarkOverviewTabProps {
 }
 
 export function BenchmarkOverviewTab({ data, countries }: BenchmarkOverviewTabProps) {
-  const { categories, companyPosition, platform, targetCurrency } = data;
+  const { categories, companyPosition, platform, targetCurrency, yourBenefitEntryCount } = data;
 
   // Radar data: market prevalence vs your coverage
   const radarData = categories.map((cat) => {
@@ -113,8 +113,8 @@ export function BenchmarkOverviewTab({ data, countries }: BenchmarkOverviewTabPr
         />
         <AnimatedStatCard
           label="Benefits Offered"
-          value={yourBenefitCount ?? 0}
-          comparison={`Market average: ${avgBenefitsOffered}`}
+          value={yourBenefitEntryCount ?? 0}
+          comparison={`Across ${yourBenefitCount ?? 0} categories (market avg: ${avgBenefitsOffered})`}
           trend={
             yourBenefitCount !== null
               ? yourBenefitCount >= avgBenefitsOffered ? "up" : "down"

@@ -232,7 +232,7 @@ function ExecutiveSummaryPage({ data }: { data: ReportData }) {
         <PageHeader title="Executive Summary" />
         <StatRow>
           <StatBox label="Your Total Cost / Employee" value={totalYourCost !== null ? formatCurrency(totalYourCost, currency) : "N/A"} subtitle={totalMedian > 0 ? `Market median: ${formatCurrency(totalMedian, currency)}` : undefined} color={B.cyan} />
-          <StatBox label="Benefits Offered" value={yourBenefitCount !== null ? `${yourBenefitCount}` : "N/A"} subtitle={`Market average: ${avgBenefits}`} color={B.purple} />
+          <StatBox label="Benefits Offered" value={bm?.yourBenefitEntryCount != null ? `${bm.yourBenefitEntryCount}` : (yourBenefitCount !== null ? `${yourBenefitCount}` : "N/A")} subtitle={`Across ${yourBenefitCount ?? 0} categories (market avg: ${avgBenefits})`} color={B.purple} />
           <StatBox label="vs Market" value={diffPct !== null ? `${diffPct > 0 ? "+" : ""}${diffPct}%` : "N/A"} subtitle={diffPct !== null ? (diffPct > 0 ? "Above median" : diffPct < 0 ? "Below median" : "At median") : undefined} color={diffPct !== null && diffPct > 0 ? B.green : B.amber} />
           <StatBox label="Companies" value={`${bm?.totalCompanies || 0}`} subtitle={COUNTRY_LABELS[config.country] || config.country} color={B.navy} />
         </StatRow>

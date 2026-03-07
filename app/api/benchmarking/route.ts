@@ -273,8 +273,10 @@ export async function GET(req: NextRequest) {
 
     // Company position (for CLIENT users)
     let companyPosition = null;
+    let yourBenefitEntryCount: number | null = null;
     if (userCompanyId && matchingIds.has(userCompanyId)) {
       const myBenefits = filteredBenefits.filter((b) => b.companyId === userCompanyId);
+      yourBenefitEntryCount = myBenefits.length;
       companyPosition = calculateCompanyPosition(myBenefits, categories, targetCurrency, rates);
     }
 
@@ -298,6 +300,7 @@ export async function GET(req: NextRequest) {
       avgSalary,
       categories,
       companyPosition,
+      yourBenefitEntryCount,
       platform,
       pensionSalaryBandStats: pensionSalaryBandStats.length > 0 ? pensionSalaryBandStats : undefined,
       dataAsOf: latestDate?.toISOString() || new Date().toISOString(),
@@ -356,6 +359,7 @@ async function buildFallbackResult(
 
   // Calculate company position against fallback data
   let companyPosition = null;
+  let yourBenefitEntryCount: number | null = null;
   if (userCompanyId) {
     const myBenefits = await prisma.benefitEntry.findMany({
       where: { companyId: userCompanyId },
@@ -367,6 +371,7 @@ async function buildFallbackResult(
         return entryCountry === country || e.country === "";
       })
       .map((e) => prismaEntryToCompanyBenefitData(e));
+    yourBenefitEntryCount = myFiltered.length;
     if (myFiltered.length > 0) {
       companyPosition = calculateCompanyPosition(myFiltered, categories, targetCurrency, rates);
     }
@@ -384,6 +389,7 @@ async function buildFallbackResult(
     avgSalary: null,
     categories,
     companyPosition,
+    yourBenefitEntryCount,
     platform: {
       adoptionRate: 0,
       totalCompanies: 0,

@@ -117,9 +117,9 @@ function ExecutiveSummaryPage({ data }: { data: ReportData }) {
         <View style={styles.statBox}>
           <Text style={styles.statLabel}>Benefits Offered</Text>
           <Text style={styles.statValue}>
-            {yourBenefitCount !== null ? `${yourBenefitCount}` : "N/A"}
+            {bm?.yourBenefitEntryCount != null ? `${bm.yourBenefitEntryCount}` : (yourBenefitCount !== null ? `${yourBenefitCount}` : "N/A")}
           </Text>
-          <Text style={styles.statComparison}>Market average: {avgBenefitsOffered}</Text>
+          <Text style={styles.statComparison}>Across {yourBenefitCount ?? 0} categories (market avg: {avgBenefitsOffered})</Text>
         </View>
         <View style={styles.statBox}>
           <Text style={styles.statLabel}>Companies in Dataset</Text>
