@@ -487,12 +487,12 @@ export default function SourceLibraryPage() {
       <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-white p-4">
         {/* Country filter */}
         <div className="w-48">
-          <Select value={filterCountry} onValueChange={setFilterCountry}>
+          <Select value={filterCountry || "all"} onValueChange={(v) => setFilterCountry(v === "all" ? "" : v)}>
             <SelectTrigger>
               <SelectValue placeholder="All Countries" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Countries</SelectItem>
+              <SelectItem value="all">All Countries</SelectItem>
               {Object.entries(COUNTRY_LABELS).map(([code, label]) => (
                 <SelectItem key={code} value={code}>
                   {label}
@@ -505,12 +505,12 @@ export default function SourceLibraryPage() {
 
         {/* Type filter */}
         <div className="w-52">
-          <Select value={filterType} onValueChange={setFilterType}>
+          <Select value={filterType || "all"} onValueChange={(v) => setFilterType(v === "all" ? "" : v)}>
             <SelectTrigger>
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="all">All Types</SelectItem>
               {SOURCE_TYPES.map((t) => (
                 <SelectItem key={t} value={t}>
                   {SOURCE_TYPE_LABELS[t]}
@@ -522,12 +522,12 @@ export default function SourceLibraryPage() {
 
         {/* Reliability filter */}
         <div className="w-44">
-          <Select value={filterReliability} onValueChange={setFilterReliability}>
+          <Select value={filterReliability || "all"} onValueChange={(v) => setFilterReliability(v === "all" ? "" : v)}>
             <SelectTrigger>
               <SelectValue placeholder="All Reliability" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Reliability</SelectItem>
+              <SelectItem value="all">All Reliability</SelectItem>
               {RELIABILITY_OPTIONS.map((r) => (
                 <SelectItem key={r} value={r}>
                   {r.charAt(0) + r.slice(1).toLowerCase()}
