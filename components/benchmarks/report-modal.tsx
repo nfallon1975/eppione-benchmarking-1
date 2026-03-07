@@ -109,11 +109,14 @@ export function ReportModal({
         if (res.ok) {
           singleCountryData = await res.json();
           allCountryData[selectedCountry] = singleCountryData!;
+        } else {
+          const errBody = await res.json().catch(() => ({}));
+          console.error("Benchmarking fetch failed:", res.status, errBody);
         }
       }
 
-      if (!singleCountryData) {
-        setError("No benchmark data available for the selected market.");
+      if (!singleCountryData || singleCountryData.categories.length === 0) {
+        setError("No benchmark data available for the selected market. Please ensure you have benefits entered for your country.");
         setGenerating(false);
         return;
       }
