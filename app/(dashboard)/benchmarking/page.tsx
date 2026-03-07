@@ -148,7 +148,7 @@ export default function BenchmarkingPage() {
             totalCompanies={benchmarkData.totalCompanies}
           />
         )}
-        {benchmarkData && benchmarkData.totalCompanies > 0 && (
+        {benchmarkData && (benchmarkData.totalCompanies > 0 || benchmarkData.categories.length > 0) && (
           <Button
             variant="outline"
             size="sm"
