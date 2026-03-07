@@ -127,7 +127,33 @@ export function generateFindings(
     );
   }
 
-  // 6. Platform adoption
+  // 6. Pension benchmarks
+  const pensionCat = categories.find((c) => c.category === "PENSION");
+  if (pensionCat?.pensionStats) {
+    const ps = pensionCat.pensionStats;
+    if (ps.totalContributionStats) {
+      const yourTotal = companyPosition?.find((p) => p.category === "PENSION")?.pensionTotalContributionRate;
+      if (yourTotal !== null && yourTotal !== undefined) {
+        const diff = yourTotal - ps.totalContributionStats.median;
+        if (Math.abs(diff) > 1) {
+          findings.push(
+            `Your total pension contribution rate of ${yourTotal}% is ${diff > 0 ? "above" : "below"} the market median of ${ps.totalContributionStats.median}%. ${ps.belowThresholdPct > 0 ? `${ps.belowThresholdPct}% of companies contribute below the 3% employer threshold.` : ""}`
+          );
+        }
+      }
+    }
+    if (ps.planTypeBreakdown.length > 0) {
+      const dcPct = ps.planTypeBreakdown.find((p) => p.type === "DC")?.percentage ?? 0;
+      const dbPct = ps.planTypeBreakdown.find((p) => p.type === "DB")?.percentage ?? 0;
+      if (dcPct > 0 || dbPct > 0) {
+        findings.push(
+          `Pension plan structure in this market: ${dcPct}% Defined Contribution, ${dbPct}% Defined Benefit${ps.planTypeBreakdown.length > 2 ? `, ${100 - dcPct - dbPct}% other types` : ""}.`
+        );
+      }
+    }
+  }
+
+  // 7. Platform adoption
   if (platform.meetsMinimum) {
     findings.push(
       `Benefits platform adoption in this market is ${platform.adoptionRate}% among surveyed companies (${platform.totalCompanies} respondents).${
@@ -138,7 +164,7 @@ export function generateFindings(
     );
   }
 
-  return findings.slice(0, 6);
+  return findings.slice(0, 8);
 }
 
 /**

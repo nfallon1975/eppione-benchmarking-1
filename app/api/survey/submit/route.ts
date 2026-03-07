@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { BenefitCategory } from "@prisma/client";
 import { ensureCountryConfigs } from "@/lib/country-config";
+import { classifySalaryBand } from "@/lib/benchmarking-types";
 
 const benefitFormSchema = z.object({
   tempId: z.string(),
@@ -55,6 +56,12 @@ const benefitFormSchema = z.object({
   // Pension
   pensionEmployerPct: z.number().min(0).max(100).nullable().optional().default(null),
   pensionEmployeePct: z.number().min(0).max(100).nullable().optional().default(null),
+  pensionPlanType: z.string().optional().default(""),
+  pensionContributionRateEmployer: z.number().min(0).max(100).nullable().optional().default(null),
+  pensionContributionRateEmployee: z.number().min(0).max(100).nullable().optional().default(null),
+  pensionDeathBenefitMultiple: z.number().min(0).nullable().optional().default(null),
+  pensionDeathBenefitType: z.string().optional().default(""),
+  pensionFormulaType: z.string().optional().default(""),
   // Broker
   brokerName: z.string().optional().default(""),
   brokerSatisfactionScore: z.number().int().min(1).max(10).nullable().optional().default(null),
@@ -180,6 +187,7 @@ export async function POST(req: NextRequest) {
             averageSalaryCurrency: cp.averageSalaryCurrency,
             averageBonusPercent: cp.averageBonusPercent,
             financialYearEndMonth: cp.financialYearEndMonth,
+            salaryBand: cp.averageSalary ? classifySalaryBand(cp.averageSalary) as "UNDER_35K" | "BAND_35K_50K" | "BAND_50K_75K" | "BAND_75K_100K" | "OVER_100K" : null,
           },
         });
       }
@@ -255,6 +263,12 @@ export async function POST(req: NextRequest) {
               dentalOrthoIncluded: benefit.dentalOrthoIncluded ?? null,
               pensionEmployerPct: benefit.pensionEmployerPct ?? null,
               pensionEmployeePct: benefit.pensionEmployeePct ?? null,
+              pensionPlanType: benefit.pensionPlanType ? (benefit.pensionPlanType as "DC" | "DB" | "CASH_BALANCE" | "HYBRID") : null,
+              pensionContributionRateEmployer: benefit.pensionContributionRateEmployer ?? null,
+              pensionContributionRateEmployee: benefit.pensionContributionRateEmployee ?? null,
+              pensionDeathBenefitMultiple: benefit.pensionDeathBenefitMultiple ?? null,
+              pensionDeathBenefitType: benefit.pensionDeathBenefitType ? (benefit.pensionDeathBenefitType as "ACCUMULATED_RESERVES" | "FIXED_MULTIPLE" | "MIXED" | "NONE") : null,
+              pensionFormulaType: benefit.pensionFormulaType ? (benefit.pensionFormulaType as "FLAT_RATE" | "STEP_RATE" | "SALARY_LINKED" | "OTHER") : null,
               brokerName: benefit.brokerName || null,
               brokerSatisfactionScore: benefit.brokerSatisfactionScore ?? null,
               renewalDate: benefit.renewalDate ? new Date(benefit.renewalDate) : null,
@@ -334,6 +348,12 @@ export async function POST(req: NextRequest) {
               dentalOrthoIncluded: benefit.dentalOrthoIncluded ?? null,
               pensionEmployerPct: benefit.pensionEmployerPct ?? null,
               pensionEmployeePct: benefit.pensionEmployeePct ?? null,
+              pensionPlanType: benefit.pensionPlanType ? (benefit.pensionPlanType as "DC" | "DB" | "CASH_BALANCE" | "HYBRID") : null,
+              pensionContributionRateEmployer: benefit.pensionContributionRateEmployer ?? null,
+              pensionContributionRateEmployee: benefit.pensionContributionRateEmployee ?? null,
+              pensionDeathBenefitMultiple: benefit.pensionDeathBenefitMultiple ?? null,
+              pensionDeathBenefitType: benefit.pensionDeathBenefitType ? (benefit.pensionDeathBenefitType as "ACCUMULATED_RESERVES" | "FIXED_MULTIPLE" | "MIXED" | "NONE") : null,
+              pensionFormulaType: benefit.pensionFormulaType ? (benefit.pensionFormulaType as "FLAT_RATE" | "STEP_RATE" | "SALARY_LINKED" | "OTHER") : null,
               brokerName: benefit.brokerName || null,
               brokerSatisfactionScore: benefit.brokerSatisfactionScore ?? null,
               renewalDate: benefit.renewalDate ? new Date(benefit.renewalDate) : null,

@@ -12,10 +12,12 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { ChartWrapper } from "./chart-wrapper";
+import { SectorComparisonChart } from "./sector-comparison-chart";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { BenchmarkResult } from "@/lib/benchmarking-types";
 import { BENEFIT_CATEGORY_LABELS, NACE_INDUSTRIES, formatCurrency } from "@/lib/utils";
+import { BRAND, CHART_FONT, GRID_STYLE, ANIMATION } from "./chart-colors";
 
 interface BenchmarkGlobalTabProps {
   country: string;
@@ -81,6 +83,17 @@ export function BenchmarkGlobalTab({ country, industry, currency }: BenchmarkGlo
 
   const targetCurrency = industryData?.targetCurrency || allData?.targetCurrency || currency;
 
+  // Sector comparison chart: horizontal bars with your industry highlighted
+  const sectorCostData = comparisonData
+    .filter((d) => d.industryMedian > 0 || d.allIndustryMedian > 0)
+    .map((d) => ({
+      label: d.fullName,
+      value: d.industryMedian,
+      isClient: true,
+    }));
+
+  const allSectorMedian = comparisonData.reduce((s, d) => s + d.allIndustryMedian, 0) / (comparisonData.length || 1);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -91,7 +104,23 @@ export function BenchmarkGlobalTab({ country, industry, currency }: BenchmarkGlo
         <span>in {country}</span>
       </div>
 
-      {/* Cost comparison */}
+      {/* Sector Comparison — horizontal sorted bars */}
+      {sectorCostData.length > 0 && (
+        <ChartWrapper
+          title="Your Industry: Cost by Category"
+          description="Median cost per employee, sorted by value. Reference line shows all-industry average."
+          downloadFilename="sector-comparison"
+        >
+          <SectorComparisonChart
+            data={sectorCostData}
+            formatValue={(v) => formatCurrency(v, targetCurrency)}
+            referenceLine={Math.round(allSectorMedian)}
+            referenceLabel="All-Industry Avg"
+          />
+        </ChartWrapper>
+      )}
+
+      {/* Cost comparison — grouped bars */}
       <ChartWrapper
         title="Industry vs All-Industry Median Cost"
         description="Median cost per employee by category"
@@ -101,10 +130,10 @@ export function BenchmarkGlobalTab({ country, industry, currency }: BenchmarkGlo
           <p className="py-8 text-center text-sm text-slate-500">No data.</p>
         ) : (
           <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={comparisonData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" fontSize={12} />
-              <YAxis fontSize={12} tickFormatter={(v) => formatCurrency(v, targetCurrency)} />
+            <BarChart data={comparisonData} barGap={2}>
+              <CartesianGrid {...GRID_STYLE} />
+              <XAxis dataKey="name" fontSize={CHART_FONT.axis} stroke="#94a3b8" tick={{ fill: BRAND.primary }} />
+              <YAxis fontSize={CHART_FONT.axis} tickFormatter={(v) => formatCurrency(v, targetCurrency)} stroke="#94a3b8" />
               <Tooltip
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 formatter={(value: any, name: any) => [
@@ -115,10 +144,11 @@ export function BenchmarkGlobalTab({ country, industry, currency }: BenchmarkGlo
                   const item = comparisonData.find((d) => d.name === label);
                   return item?.fullName || label;
                 }}
+                contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
               />
-              <Legend />
-              <Bar dataKey="industryMedian" name="Your Industry" fill="#00B4D8" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="allIndustryMedian" name="All Industries" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+              <Legend wrapperStyle={{ fontSize: CHART_FONT.label }} />
+              <Bar dataKey="industryMedian" name="Your Industry" fill={BRAND.accent} radius={[4, 4, 0, 0]} animationDuration={ANIMATION.duration} />
+              <Bar dataKey="allIndustryMedian" name="All Industries" fill={BRAND.primary} radius={[4, 4, 0, 0]} animationDuration={ANIMATION.duration} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -134,10 +164,10 @@ export function BenchmarkGlobalTab({ country, industry, currency }: BenchmarkGlo
           <p className="py-8 text-center text-sm text-slate-500">No data.</p>
         ) : (
           <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={comparisonData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" fontSize={12} />
-              <YAxis fontSize={12} domain={[0, 100]} />
+            <BarChart data={comparisonData} barGap={2}>
+              <CartesianGrid {...GRID_STYLE} />
+              <XAxis dataKey="name" fontSize={CHART_FONT.axis} stroke="#94a3b8" tick={{ fill: BRAND.primary }} />
+              <YAxis fontSize={CHART_FONT.axis} domain={[0, 100]} stroke="#94a3b8" tickFormatter={(v) => `${v}%`} />
               <Tooltip
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 formatter={(value: any, name: any) => [`${value}%`, String(name)]}
@@ -145,10 +175,11 @@ export function BenchmarkGlobalTab({ country, industry, currency }: BenchmarkGlo
                   const item = comparisonData.find((d) => d.name === label);
                   return item?.fullName || label;
                 }}
+                contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
               />
-              <Legend />
-              <Bar dataKey="industryPrevalence" name="Your Industry" fill="#00B4D8" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="allPrevalence" name="All Industries" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+              <Legend wrapperStyle={{ fontSize: CHART_FONT.label }} />
+              <Bar dataKey="industryPrevalence" name="Your Industry" fill={BRAND.accent} radius={[4, 4, 0, 0]} animationDuration={ANIMATION.duration} />
+              <Bar dataKey="allPrevalence" name="All Industries" fill={BRAND.primary} radius={[4, 4, 0, 0]} animationDuration={ANIMATION.duration} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -159,8 +190,8 @@ export function BenchmarkGlobalTab({ country, industry, currency }: BenchmarkGlo
         {industryData && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Your Industry</CardTitle>
-              <CardDescription>{NACE_INDUSTRIES[industry] || industry}</CardDescription>
+              <CardTitle className="text-base">{NACE_INDUSTRIES[industry] || industry}</CardTitle>
+              <CardDescription>Your industry sector</CardDescription>
             </CardHeader>
             <CardContent className="text-sm">
               <div className="grid grid-cols-2 gap-2">

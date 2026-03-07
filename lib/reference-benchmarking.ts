@@ -250,6 +250,14 @@ export async function buildReferenceCategories(
         pensionStats = {
           employerPctStats: employerStats,
           employeePctStats: employeeStats,
+          totalContributionStats: null,
+          deathBenefitMultipleStats: null,
+          planTypeBreakdown: [],
+          employerOnlyPct: 0,
+          employerPlusEmployeePct: 0,
+          belowThresholdPct: 0,
+          formulaTypeBreakdown: [],
+          deathBenefitTypeBreakdown: [],
         };
       }
     }

@@ -507,16 +507,53 @@ export function BenefitEntryForm({
           <p className="text-sm font-medium text-indigo-800">Pension Details</p>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
+              <Label>Plan Type</Label>
+              <Select
+                value={benefit.pensionPlanType || ""}
+                onValueChange={(v) => update("pensionPlanType", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select plan type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DC">Defined Contribution (DC)</SelectItem>
+                  <SelectItem value="DB">Defined Benefit (DB)</SelectItem>
+                  <SelectItem value="CASH_BALANCE">Cash Balance</SelectItem>
+                  <SelectItem value="HYBRID">Hybrid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Contribution Formula</Label>
+              <Select
+                value={benefit.pensionFormulaType || ""}
+                onValueChange={(v) => update("pensionFormulaType", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select formula type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FLAT_RATE">Flat Rate</SelectItem>
+                  <SelectItem value="STEP_RATE">Step Rate</SelectItem>
+                  <SelectItem value="SALARY_LINKED">Salary Linked</SelectItem>
+                  <SelectItem value="OTHER">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
               <Label>Employer Contribution (%)</Label>
               <Input
                 type="number"
                 min={0}
                 max={100}
                 step={0.5}
-                value={benefit.pensionEmployerPct ?? ""}
-                onChange={(e) =>
-                  update("pensionEmployerPct", e.target.value ? parseFloat(e.target.value) : null)
-                }
+                value={benefit.pensionContributionRateEmployer ?? benefit.pensionEmployerPct ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value ? parseFloat(e.target.value) : null;
+                  onUpdate({ ...benefit, pensionContributionRateEmployer: val, pensionEmployerPct: val });
+                }}
                 placeholder="e.g. 5"
               />
             </div>
@@ -527,12 +564,45 @@ export function BenefitEntryForm({
                 min={0}
                 max={100}
                 step={0.5}
-                value={benefit.pensionEmployeePct ?? ""}
-                onChange={(e) =>
-                  update("pensionEmployeePct", e.target.value ? parseFloat(e.target.value) : null)
-                }
+                value={benefit.pensionContributionRateEmployee ?? benefit.pensionEmployeePct ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value ? parseFloat(e.target.value) : null;
+                  onUpdate({ ...benefit, pensionContributionRateEmployee: val, pensionEmployeePct: val });
+                }}
                 placeholder="e.g. 5"
               />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Death Benefit Multiple (x salary)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={0.5}
+                value={benefit.pensionDeathBenefitMultiple ?? ""}
+                onChange={(e) =>
+                  update("pensionDeathBenefitMultiple", e.target.value ? parseFloat(e.target.value) : null)
+                }
+                placeholder="e.g. 2"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Death Benefit Type</Label>
+              <Select
+                value={benefit.pensionDeathBenefitType || ""}
+                onValueChange={(v) => update("pensionDeathBenefitType", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FIXED_MULTIPLE">Fixed Multiple of Salary</SelectItem>
+                  <SelectItem value="ACCUMULATED_RESERVES">Accumulated Reserves</SelectItem>
+                  <SelectItem value="MIXED">Mixed</SelectItem>
+                  <SelectItem value="NONE">None</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

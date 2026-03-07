@@ -323,6 +323,12 @@ function benefitEntryToFormData(entry: {
   dentalOrthoIncluded?: boolean | null;
   pensionEmployerPct?: number | null;
   pensionEmployeePct?: number | null;
+  pensionPlanType?: string | null;
+  pensionContributionRateEmployer?: number | null;
+  pensionContributionRateEmployee?: number | null;
+  pensionDeathBenefitMultiple?: number | null;
+  pensionDeathBenefitType?: string | null;
+  pensionFormulaType?: string | null;
   brokerName?: string | null;
   brokerSatisfactionScore?: number | null;
   renewalDate?: Date | null;
@@ -373,6 +379,12 @@ function benefitEntryToFormData(entry: {
     dentalOrthoIncluded: entry.dentalOrthoIncluded ?? null,
     pensionEmployerPct: entry.pensionEmployerPct ?? null,
     pensionEmployeePct: entry.pensionEmployeePct ?? null,
+    pensionPlanType: entry.pensionPlanType || "",
+    pensionContributionRateEmployer: entry.pensionContributionRateEmployer ?? null,
+    pensionContributionRateEmployee: entry.pensionContributionRateEmployee ?? null,
+    pensionDeathBenefitMultiple: entry.pensionDeathBenefitMultiple ?? null,
+    pensionDeathBenefitType: entry.pensionDeathBenefitType || "",
+    pensionFormulaType: entry.pensionFormulaType || "",
     brokerName: entry.brokerName || "",
     brokerSatisfactionScore: entry.brokerSatisfactionScore ?? null,
     renewalDate: entry.renewalDate ? entry.renewalDate.toISOString().split("T")[0] : "",

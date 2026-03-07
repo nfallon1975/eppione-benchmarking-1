@@ -20,12 +20,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { FileText, Globe, Loader2 } from "lucide-react";
 import { COUNTRY_LABELS } from "@/lib/utils";
-import { pdf } from "@react-pdf/renderer";
 import type { BenchmarkResult } from "@/lib/benchmarking-types";
 import type { ReportConfig, ReportData, CrossCountryData, ComplianceReportData } from "@/lib/pdf/report-types";
-import { captureCharts } from "@/lib/pdf/report-charts";
 import { generateFindings, generateGlobalFindings, generateRecommendations } from "@/lib/pdf/report-findings";
-import { BenchmarkReportDocument } from "@/lib/pdf/report-document";
 
 interface ReportModalProps {
   open: boolean;
@@ -40,9 +37,8 @@ interface ReportModalProps {
 
 const STATUS_MESSAGES = [
   "Fetching benchmark data...",
-  "Capturing charts...",
   "Generating insights...",
-  "Building PDF document...",
+  "Rendering charts & building PDF...",
   "Finalising report...",
 ];
 
@@ -56,9 +52,7 @@ export function ReportModal({
   companyName,
   companyId,
 }: ReportModalProps) {
-  const [reportType, setReportType] = useState<"single" | "global">(
-    countries.length > 1 ? "single" : "single"
-  );
+  const [reportType, setReportType] = useState<"single" | "global">("single");
   const [selectedCountry, setSelectedCountry] = useState(country);
   const [includeCost, setIncludeCost] = useState(true);
   const [includePlatform, setIncludePlatform] = useState(true);
@@ -94,26 +88,19 @@ export function ReportModal({
       let crossCountryData: CrossCountryData | null = null;
 
       if (isGlobal) {
-        // Fetch all countries
         for (const c of countries) {
           const params = new URLSearchParams({ country: c, currency });
           if (industry) params.set("industry", industry);
           if (companyId) params.set("companyId", companyId);
           const res = await fetch(`/api/benchmarking?${params}`);
-          if (res.ok) {
-            allCountryData[c] = await res.json();
-          }
+          if (res.ok) allCountryData[c] = await res.json();
         }
-        // Use first country as primary
         singleCountryData = allCountryData[countries[0]] || null;
 
-        // Fetch cross-country data
         let crossUrl = `/api/benchmarking/cross-country?currency=${currency}`;
         if (companyId) crossUrl += `&companyId=${encodeURIComponent(companyId)}`;
         const crossRes = await fetch(crossUrl);
-        if (crossRes.ok) {
-          crossCountryData = await crossRes.json();
-        }
+        if (crossRes.ok) crossCountryData = await crossRes.json();
       } else {
         const params = new URLSearchParams({ country: selectedCountry, currency });
         if (industry) params.set("industry", industry);
@@ -131,16 +118,11 @@ export function ReportModal({
         return;
       }
 
-      // 2. Capture charts
-      setStatusIdx(1);
-      const charts = await captureCharts(singleCountryData, crossCountryData, config);
-
-      // 2b. Fetch compliance data if enabled
+      // 2. Fetch compliance data
       let complianceData: ComplianceReportData | null = null;
       if (includeCompliance) {
         const complianceCountry = isGlobal ? countries[0] : selectedCountry;
         try {
-          // Trigger a fresh check
           const checkRes = await fetch("/api/compliance/check", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -148,46 +130,36 @@ export function ReportModal({
           });
           if (checkRes.ok) {
             const checkData = await checkRes.json();
-            // Also fetch limits
             const limitsRes = await fetch(`/api/compliance/results?country=${complianceCountry}`);
             const limitsData = limitsRes.ok ? await limitsRes.json() : { results: [], limits: [] };
             complianceData = {
               country: complianceCountry,
               results: (limitsData.results || []).map((r: Record<string, unknown>) => ({
-                status: r.status,
-                gap: r.gap,
-                recommendation: r.recommendation,
-                requirement: r.requirement,
+                status: r.status, gap: r.gap, recommendation: r.recommendation, requirement: r.requirement,
               })),
               limits: limitsData.limits || [],
-              summary: checkData.summary || {
-                totalRequirements: 0,
-                compliant: 0,
-                nonCompliant: 0,
-                partiallyCompliant: 0,
-                mandatoryIssues: 0,
-              },
+              summary: checkData.summary || { totalRequirements: 0, compliant: 0, nonCompliant: 0, partiallyCompliant: 0, mandatoryIssues: 0 },
             };
           }
         } catch (err) {
-          console.error("Failed to fetch compliance data for report:", err);
+          console.error("Failed to fetch compliance data:", err);
         }
       }
 
       // 3. Generate findings
-      setStatusIdx(2);
+      setStatusIdx(1);
       const findings = generateFindings(singleCountryData, companyName);
       const globalFindings = isGlobal ? generateGlobalFindings(allCountryData) : [];
       const recommendations = isGlobal ? generateRecommendations(allCountryData) : [];
 
-      // 4. Build PDF
-      setStatusIdx(3);
+      // 4. Build report data and send to Puppeteer API
+      setStatusIdx(2);
       const reportData: ReportData = {
         config,
         singleCountryData,
         allCountryData,
         crossCountryData,
-        charts,
+        charts: { radarChart: null, costBarChart: null, costPieChart: null, fundingChart: null, crossCountryChart: null },
         findings,
         globalFindings,
         recommendations,
@@ -195,8 +167,19 @@ export function ReportModal({
         generatedAt: new Date().toISOString(),
       };
 
-      setStatusIdx(4);
-      const blob = await pdf(<BenchmarkReportDocument data={reportData} />).toBlob();
+      const pdfRes = await fetch("/api/report/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reportData),
+      });
+
+      if (!pdfRes.ok) {
+        const errData = await pdfRes.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errData.error || "PDF generation failed");
+      }
+
+      setStatusIdx(3);
+      const blob = await pdfRes.blob();
 
       // 5. Download
       const url = URL.createObjectURL(blob);
@@ -211,7 +194,7 @@ export function ReportModal({
       onClose();
     } catch (err) {
       console.error("PDF generation failed:", err);
-      setError("Failed to generate report. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to generate report. Please try again.");
     } finally {
       setGenerating(false);
     }
@@ -223,7 +206,7 @@ export function ReportModal({
         <DialogHeader>
           <DialogTitle>Download Benchmarking Report</DialogTitle>
           <DialogDescription>
-            Generate a professional PDF report of your benchmarking analysis.
+            Generate a professional PDF report with high-quality charts.
           </DialogDescription>
         </DialogHeader>
 
@@ -238,7 +221,7 @@ export function ReportModal({
                 disabled={generating}
                 className={`flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
                   reportType === "single"
-                    ? "border-[#00B4D8] bg-[#00B4D8]/10 text-[#00B4D8]"
+                    ? "border-[#8F4CFF] bg-[#8F4CFF]/10 text-[#8F4CFF]"
                     : "border-slate-200 text-slate-600 hover:bg-slate-50"
                 }`}
               >
@@ -251,7 +234,7 @@ export function ReportModal({
                 disabled={generating || countries.length < 2}
                 className={`flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
                   reportType === "global"
-                    ? "border-[#00B4D8] bg-[#00B4D8]/10 text-[#00B4D8]"
+                    ? "border-[#8F4CFF] bg-[#8F4CFF]/10 text-[#8F4CFF]"
                     : "border-slate-200 text-slate-600 hover:bg-slate-50"
                 } ${countries.length < 2 ? "cursor-not-allowed opacity-50" : ""}`}
               >
@@ -270,26 +253,17 @@ export function ReportModal({
           {!isGlobal && countries.length > 1 && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">Country</Label>
-              <Select
-                value={selectedCountry}
-                onValueChange={setSelectedCountry}
-                disabled={generating}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={selectedCountry} onValueChange={setSelectedCountry} disabled={generating}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {countries.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {COUNTRY_LABELS[c] || c}
-                    </SelectItem>
+                    <SelectItem key={c} value={c}>{COUNTRY_LABELS[c] || c}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           )}
 
-          {/* Global shows included countries */}
           {isGlobal && (
             <div className="space-y-1">
               <Label className="text-sm font-medium">Included Markets</Label>
@@ -302,51 +276,22 @@ export function ReportModal({
           {/* Toggles */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label htmlFor="include-cost" className="text-sm">
-                Include Cost Analysis
-              </Label>
-              <Switch
-                id="include-cost"
-                checked={includeCost}
-                onCheckedChange={setIncludeCost}
-                disabled={generating}
-              />
+              <Label htmlFor="include-cost" className="text-sm">Include Cost Analysis</Label>
+              <Switch id="include-cost" checked={includeCost} onCheckedChange={setIncludeCost} disabled={generating} />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="include-platform" className="text-sm">
-                Include Platform Benchmarks
-              </Label>
-              <Switch
-                id="include-platform"
-                checked={includePlatform}
-                onCheckedChange={setIncludePlatform}
-                disabled={generating}
-              />
+              <Label htmlFor="include-platform" className="text-sm">Include Platform Benchmarks</Label>
+              <Switch id="include-platform" checked={includePlatform} onCheckedChange={setIncludePlatform} disabled={generating} />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="include-compliance" className="text-sm">
-                Include Compliance Summary
-              </Label>
-              <Switch
-                id="include-compliance"
-                checked={includeCompliance}
-                onCheckedChange={setIncludeCompliance}
-                disabled={generating}
-              />
+              <Label htmlFor="include-compliance" className="text-sm">Include Compliance Summary</Label>
+              <Switch id="include-compliance" checked={includeCompliance} onCheckedChange={setIncludeCompliance} disabled={generating} />
             </div>
           </div>
 
-          {/* Error */}
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
-          {/* Generate button */}
-          <Button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="w-full"
-          >
+          <Button onClick={handleGenerate} disabled={generating} className="w-full">
             {generating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

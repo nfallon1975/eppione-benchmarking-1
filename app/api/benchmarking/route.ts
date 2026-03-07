@@ -7,6 +7,7 @@ import {
   calculateCategoryBenchmarks,
   calculatePlatformBenchmarks,
   calculateCompanyPosition,
+  calculatePensionSalaryBandStats,
   filterCompanyIds,
   ANONYMITY_MINIMUM,
 } from "@/lib/benchmarking";
@@ -19,6 +20,7 @@ import type {
 } from "@/lib/benchmarking-types";
 import { prismaEntryToCompanyBenefitData } from "@/lib/benefit-data-mapping";
 import { buildReferenceCategories } from "@/lib/reference-benchmarking";
+import { buildBaselineCategories } from "@/lib/baseline-benchmarking";
 
 export async function GET(req: NextRequest) {
   try {
@@ -31,6 +33,7 @@ export async function GET(req: NextRequest) {
     const country = searchParams.get("country");
     let industry = searchParams.get("industry");
     const sizeBand = searchParams.get("sizeBand");
+    const salaryBand = searchParams.get("salaryBand");
     const grouping = (searchParams.get("grouping") || "country_industry") as BenchmarkGrouping;
     const currency = searchParams.get("currency");
 
@@ -86,53 +89,11 @@ export async function GET(req: NextRequest) {
     );
 
     if (approvedCompanyIds.size === 0) {
-      // No approved companies at all — try reference data before returning empty
-      const referenceCategories = await buildReferenceCategories(country, targetCurrency, rates);
-      if (referenceCategories.length > 0) {
-        // Calculate company position against reference data
-        let companyPosition = null;
-        if (userCompanyId) {
-          const myBenefits = await prisma.benefitEntry.findMany({
-            where: { companyId: userCompanyId },
-            include: { company: { select: { country: true } }, healthLimits: true },
-          });
-          const myFiltered = myBenefits
-            .filter((e) => {
-              const entryCountry = e.country || e.company.country;
-              return entryCountry === country || e.country === "";
-            })
-            .map((e) => prismaEntryToCompanyBenefitData(e));
-          if (myFiltered.length > 0) {
-            companyPosition = calculateCompanyPosition(myFiltered, referenceCategories, targetCurrency, rates);
-          }
-        }
-        const refResult: BenchmarkResult = {
-          country,
-          industry: industry || null,
-          sizeBand: sizeBand || null,
-          grouping,
-          targetCurrency,
-          totalCompanies: 0,
-          avgEmployeeCount: 0,
-          avgSalary: null,
-          categories: referenceCategories,
-          companyPosition,
-          platform: {
-            adoptionRate: 0,
-            totalCompanies: 0,
-            meetsMinimum: false,
-            avgFee: null,
-            satisfactionStats: null,
-            platformTypes: [],
-            feeModels: [],
-          },
-          dataAsOf: new Date().toISOString(),
-          dataQuality: "reference",
-          dataQualityMessage:
-            "Reference benchmarks based on published market data. As more companies join, you\u2019ll see live peer benchmarks.",
-        };
-        return NextResponse.json(refResult);
-      }
+      // No approved companies at all — try reference data, then baseline
+      const fallbackResult = await buildFallbackResult(
+        country, industry, sizeBand, grouping, targetCurrency, rates, userCompanyId
+      );
+      if (fallbackResult) return NextResponse.json(fallbackResult);
       return NextResponse.json(emptyResult(country, industry, sizeBand, grouping, targetCurrency));
     }
 
@@ -171,6 +132,7 @@ export async function GET(req: NextRequest) {
       country,
       industry: industry || undefined,
       sizeBand: sizeBand || undefined,
+      salaryBand: salaryBand || undefined,
     };
 
     // For filtering: include companies that are either in the target country or have benefits there
@@ -178,10 +140,21 @@ export async function GET(req: NextRequest) {
       (c) => c.country === country || countryBenefitCompanyIds.has(c.id)
     );
 
+    // Fetch salary bands from CompanyCountryProfiles for filtering
+    const countryProfiles = await prisma.companyCountryProfile.findMany({
+      where: {
+        companyId: { in: companiesInScope.map((c) => c.id) },
+        country: country,
+      },
+      select: { companyId: true, salaryBand: true },
+    });
+    const salaryBandMap = new Map(countryProfiles.map((p) => [p.companyId, p.salaryBand]));
+
     const scopeForFilter = companiesInScope.map((c) => ({
       ...c,
       // For multi-country companies, treat them as being in the country where they have benefits
       country: countryBenefitCompanyIds.has(c.id) ? country : c.country,
+      salaryBand: salaryBandMap.get(c.id) ?? null,
     }));
 
     let matchingIds = filterCompanyIds(scopeForFilter, filters, grouping);
@@ -211,60 +184,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Tier 2 → Tier 3: If still not enough, try reference data
+    // Tier 2 → Tier 3: If still not enough, try reference/baseline data
     if (matchingIds.size < ANONYMITY_MINIMUM) {
-      const referenceCategories = await buildReferenceCategories(
-        country,
-        targetCurrency,
-        rates
+      const fallbackResult = await buildFallbackResult(
+        country, industry, sizeBand, effectiveGrouping, targetCurrency, rates, userCompanyId
       );
-      if (referenceCategories.length > 0) {
-        // Calculate company position against reference data
-        let companyPosition = null;
-        if (userCompanyId) {
-          const myBenefits = await prisma.benefitEntry.findMany({
-            where: { companyId: userCompanyId },
-            include: { company: { select: { country: true } }, healthLimits: true },
-          });
-          const myFiltered = myBenefits
-            .filter((e) => {
-              const entryCountry = e.country || e.company.country;
-              return entryCountry === country || e.country === "";
-            })
-            .map((e) => prismaEntryToCompanyBenefitData(e));
-          if (myFiltered.length > 0) {
-            companyPosition = calculateCompanyPosition(myFiltered, referenceCategories, targetCurrency, rates);
-          }
-        }
-        const refResult: BenchmarkResult = {
-          country,
-          industry: industry || null,
-          sizeBand: sizeBand || null,
-          grouping: effectiveGrouping,
-          targetCurrency,
-          totalCompanies: 0,
-          avgEmployeeCount: 0,
-          avgSalary: null,
-          categories: referenceCategories,
-          companyPosition,
-          platform: {
-            adoptionRate: 0,
-            totalCompanies: 0,
-            meetsMinimum: false,
-            avgFee: null,
-            satisfactionStats: null,
-            platformTypes: [],
-            feeModels: [],
-          },
-          dataAsOf: new Date().toISOString(),
-          dataQuality: "reference",
-          dataQualityMessage:
-            "Reference benchmarks based on published market data. As more companies join, you\u2019ll see live peer benchmarks.",
-        };
-        return NextResponse.json(refResult);
-      }
-
-      // No reference data either — return empty
+      if (fallbackResult) return NextResponse.json(fallbackResult);
       return NextResponse.json(
         emptyResult(country, industry, sizeBand, grouping, targetCurrency)
       );
@@ -339,6 +264,13 @@ export async function GET(req: NextRequest) {
     }));
     const platform = calculatePlatformBenchmarks(platformData, targetCurrency, rates);
 
+    // Pension salary band stats
+    const pensionEntries = filteredBenefits.filter((b) => b.benefitCategory === "PENSION");
+    const pensionSalaryBandStats = calculatePensionSalaryBandStats(
+      pensionEntries,
+      countryProfiles.map((p) => ({ companyId: p.companyId, salaryBand: p.salaryBand }))
+    );
+
     // Company position (for CLIENT users)
     let companyPosition = null;
     if (userCompanyId && matchingIds.has(userCompanyId)) {
@@ -358,6 +290,7 @@ export async function GET(req: NextRequest) {
       country,
       industry: industry || null,
       sizeBand: sizeBand || null,
+      salaryBand: salaryBand || null,
       grouping: effectiveGrouping,
       targetCurrency,
       totalCompanies,
@@ -366,6 +299,7 @@ export async function GET(req: NextRequest) {
       categories,
       companyPosition,
       platform,
+      pensionSalaryBandStats: pensionSalaryBandStats.length > 0 ? pensionSalaryBandStats : undefined,
       dataAsOf: latestDate?.toISOString() || new Date().toISOString(),
       dataQuality,
       dataQualityMessage,
@@ -392,6 +326,80 @@ function convertAmount(
   return amount;
 }
 
+async function buildFallbackResult(
+  country: string,
+  industry: string | null,
+  sizeBand: string | null,
+  grouping: BenchmarkGrouping,
+  targetCurrency: string,
+  rates: Record<string, number>,
+  userCompanyId: string | null
+): Promise<BenchmarkResult | null> {
+  // Try reference data first
+  let categories = await buildReferenceCategories(country, targetCurrency, rates);
+  let quality: DataQuality = "reference";
+  let qualityMessage =
+    "Reference benchmarks based on published market data. As more companies join, you\u2019ll see live peer benchmarks.";
+
+  // If no reference data, try baseline data
+  let baselineSources: string[] = [];
+  if (categories.length === 0) {
+    const baseline = await buildBaselineCategories(country, targetCurrency, rates, industry || undefined);
+    categories = baseline.categories;
+    baselineSources = baseline.sources;
+    if (categories.length === 0) return null;
+    quality = "reference";
+    qualityMessage = baseline.sources.length > 0
+      ? `Baseline benchmarks sourced from: ${baseline.sources.join("; ")}`
+      : "Baseline benchmarks based on published industry data.";
+  }
+
+  // Calculate company position against fallback data
+  let companyPosition = null;
+  if (userCompanyId) {
+    const myBenefits = await prisma.benefitEntry.findMany({
+      where: { companyId: userCompanyId },
+      include: { company: { select: { country: true } }, healthLimits: true },
+    });
+    const myFiltered = myBenefits
+      .filter((e) => {
+        const entryCountry = e.country || e.company.country;
+        return entryCountry === country || e.country === "";
+      })
+      .map((e) => prismaEntryToCompanyBenefitData(e));
+    if (myFiltered.length > 0) {
+      companyPosition = calculateCompanyPosition(myFiltered, categories, targetCurrency, rates);
+    }
+  }
+
+  return {
+    country,
+    industry: industry || null,
+    sizeBand: sizeBand || null,
+    salaryBand: null,
+    grouping,
+    targetCurrency,
+    totalCompanies: 0,
+    avgEmployeeCount: 0,
+    avgSalary: null,
+    categories,
+    companyPosition,
+    platform: {
+      adoptionRate: 0,
+      totalCompanies: 0,
+      meetsMinimum: false,
+      avgFee: null,
+      satisfactionStats: null,
+      platformTypes: [],
+      feeModels: [],
+    },
+    dataAsOf: new Date().toISOString(),
+    dataQuality: quality,
+    dataQualityMessage: qualityMessage,
+    baselineSources: baselineSources.length > 0 ? baselineSources : undefined,
+  };
+}
+
 function emptyResult(
   country: string,
   industry: string | null,
@@ -403,6 +411,7 @@ function emptyResult(
     country,
     industry: industry || null,
     sizeBand: sizeBand || null,
+    salaryBand: null,
     grouping,
     targetCurrency,
     totalCompanies: 0,

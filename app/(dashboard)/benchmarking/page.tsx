@@ -16,7 +16,15 @@ import { BenchmarkGlobalTab } from "@/components/benchmarks/benchmark-global-tab
 import { ReportModal } from "@/components/benchmarks/report-modal";
 import { FileText, CheckCircle2, AlertTriangle, Info, ChevronDown, ExternalLink } from "lucide-react";
 import type { BenchmarkResult } from "@/lib/benchmarking-types";
+import { SALARY_BAND_LABELS } from "@/lib/benchmarking-types";
 import { COUNTRY_LABELS } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function BenchmarkingPage() {
   useSession(); // ensure authenticated
@@ -31,6 +39,7 @@ export default function BenchmarkingPage() {
   const [companyName, setCompanyName] = useState("");
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [salaryBand, setSalaryBand] = useState("");
 
   // Load company info on mount
   useEffect(() => {
@@ -79,6 +88,7 @@ export default function BenchmarkingPage() {
     try {
       const params = new URLSearchParams({ country, currency });
       if (industry) params.set("industry", industry);
+      if (salaryBand) params.set("salaryBand", salaryBand);
       const res = await fetch(`/api/benchmarking?${params}`);
       if (res.ok) {
         setBenchmarkData(await res.json());
@@ -88,7 +98,7 @@ export default function BenchmarkingPage() {
     } finally {
       setLoading(false);
     }
-  }, [country, industry, currency]);
+  }, [country, industry, currency, salaryBand]);
 
   useEffect(() => {
     fetchBenchmarks();
@@ -118,6 +128,20 @@ export default function BenchmarkingPage() {
           onChange={setCurrency}
           localCurrency={localCurrency}
         />
+        <Select
+          value={salaryBand || "all"}
+          onValueChange={(v) => setSalaryBand(v === "all" ? "" : v)}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All Salary Bands" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Salary Bands</SelectItem>
+            {Object.entries(SALARY_BAND_LABELS).map(([key, label]) => (
+              <SelectItem key={key} value={key}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {benchmarkData && (
           <BenchmarkDateStamp
             dataAsOf={benchmarkData.dataAsOf}
@@ -163,6 +187,21 @@ export default function BenchmarkingPage() {
             <Info className="h-4 w-4 shrink-0" />
           )}
           <span>{benchmarkData.dataQualityMessage}</span>
+        </div>
+      )}
+
+      {/* Baseline Sources Attribution */}
+      {!loading && benchmarkData && benchmarkData.baselineSources && benchmarkData.baselineSources.length > 0 && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <p className="text-xs font-medium text-slate-500 mb-1">Data Sources</p>
+          <div className="flex flex-wrap gap-2">
+            {benchmarkData.baselineSources.map((src, i) => (
+              <span key={i} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
+                <Info className="h-3 w-3 text-slate-400" />
+                {src}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 

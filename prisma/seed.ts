@@ -671,6 +671,22 @@ async function main() {
   });
   console.log("  Seeded admin user: admin@eppione.com / admin123");
 
+  // Create broker user
+  const brokerPassword = await hash("broker123", 12);
+  await prisma.user.upsert({
+    where: { email: "broker@eppione.com" },
+    update: {},
+    create: {
+      email: "broker@eppione.com",
+      passwordHash: brokerPassword,
+      name: "Demo Broker",
+      role: "BROKER",
+      status: "APPROVED",
+      emailVerified: new Date(),
+    },
+  });
+  console.log("  Seeded broker user: broker@eppione.com / broker123");
+
   // Create demo company 1 (Acme Corp) with updated fields
   const demoCompany = await prisma.company.upsert({
     where: { id: "demo-company-1" },

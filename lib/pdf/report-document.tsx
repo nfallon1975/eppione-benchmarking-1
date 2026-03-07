@@ -451,6 +451,138 @@ function FundingPage({ data }: { data: ReportData }) {
   );
 }
 
+function PensionBenchmarkPage({ data }: { data: ReportData }) {
+  const bm = data.singleCountryData;
+  if (!bm) return null;
+
+  const pensionCat = bm.categories.find((c) => c.category === "PENSION");
+  if (!pensionCat || !pensionCat.meetsMinimum || !pensionCat.pensionStats) return null;
+
+  const ps = pensionCat.pensionStats;
+  const hasPlanTypes = ps.planTypeBreakdown.length > 0;
+  const hasDeathBenefitTypes = ps.deathBenefitTypeBreakdown.length > 0;
+  const hasSalaryBandStats = (bm.pensionSalaryBandStats ?? []).length > 0;
+
+  if (!hasPlanTypes && !hasSalaryBandStats && ps.employerOnlyPct === 0) return null;
+
+  const PLAN_LABELS: Record<string, string> = { DC: "Defined Contribution", DB: "Defined Benefit", CASH_BALANCE: "Cash Balance", HYBRID: "Hybrid" };
+  const DB_LABELS: Record<string, string> = { ACCUMULATED_RESERVES: "Accumulated Reserves", FIXED_MULTIPLE: "Fixed Multiple", MIXED: "Mixed", NONE: "None" };
+
+  return (
+    <Page size="A4" style={styles.page}>
+      <Text style={styles.sectionHeader}>Pension Benchmarking</Text>
+      <Text style={styles.sectionDescription}>
+        Plan type prevalence, contribution analysis, and death benefit benchmarks
+      </Text>
+
+      <View style={styles.statRow}>
+        <View style={styles.statBox}>
+          <Text style={styles.statLabel}>Median Total Contribution</Text>
+          <Text style={styles.statValue}>
+            {ps.totalContributionStats ? `${ps.totalContributionStats.median}%` : "N/A"}
+          </Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statLabel}>Employer Only Plans</Text>
+          <Text style={styles.statValue}>{ps.employerOnlyPct}%</Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statLabel}>Below 3% ER Rate</Text>
+          <Text style={styles.statValue}>{ps.belowThresholdPct}%</Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statLabel}>Median Death Benefit</Text>
+          <Text style={styles.statValue}>
+            {ps.deathBenefitMultipleStats ? `${ps.deathBenefitMultipleStats.median}x` : "N/A"}
+          </Text>
+        </View>
+      </View>
+
+      {hasPlanTypes && (
+        <View style={{ marginTop: 8 }}>
+          <Text style={{ fontSize: 11, fontFamily: "Helvetica-Bold", color: BRAND.navy, marginBottom: 6 }}>
+            DC vs DB Plan Prevalence
+          </Text>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderCell, { width: "60%" }]}>Plan Type</Text>
+              <Text style={[styles.tableHeaderCell, { width: "20%", textAlign: "center" }]}>Count</Text>
+              <Text style={[styles.tableHeaderCell, { width: "20%", textAlign: "center" }]}>%</Text>
+            </View>
+            {ps.planTypeBreakdown.map((pt, i) => (
+              <View key={pt.type} style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+                <Text style={[styles.tableCell, { width: "60%" }]}>{PLAN_LABELS[pt.type] || pt.type}</Text>
+                <Text style={[styles.tableCell, { width: "20%", textAlign: "center" }]}>{pt.count}</Text>
+                <Text style={[styles.tableCell, { width: "20%", textAlign: "center" }]}>{pt.percentage}%</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {hasDeathBenefitTypes && (
+        <View style={{ marginTop: 8 }}>
+          <Text style={{ fontSize: 11, fontFamily: "Helvetica-Bold", color: BRAND.navy, marginBottom: 6 }}>
+            Death Benefit Structure
+          </Text>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderCell, { width: "60%" }]}>Type</Text>
+              <Text style={[styles.tableHeaderCell, { width: "20%", textAlign: "center" }]}>Count</Text>
+              <Text style={[styles.tableHeaderCell, { width: "20%", textAlign: "center" }]}>%</Text>
+            </View>
+            {ps.deathBenefitTypeBreakdown.map((dt, i) => (
+              <View key={dt.type} style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+                <Text style={[styles.tableCell, { width: "60%" }]}>{DB_LABELS[dt.type] || dt.type}</Text>
+                <Text style={[styles.tableCell, { width: "20%", textAlign: "center" }]}>{dt.count}</Text>
+                <Text style={[styles.tableCell, { width: "20%", textAlign: "center" }]}>{dt.percentage}%</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {hasSalaryBandStats && (
+        <View style={{ marginTop: 8 }}>
+          <Text style={{ fontSize: 11, fontFamily: "Helvetica-Bold", color: BRAND.navy, marginBottom: 6 }}>
+            Contributions by Salary Band
+          </Text>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderCell, { width: "30%" }]}>Salary Band</Text>
+              <Text style={[styles.tableHeaderCell, { width: "14%", textAlign: "center" }]}>Cos</Text>
+              <Text style={[styles.tableHeaderCell, { width: "14%", textAlign: "center" }]}>P25</Text>
+              <Text style={[styles.tableHeaderCell, { width: "14%", textAlign: "center" }]}>Med</Text>
+              <Text style={[styles.tableHeaderCell, { width: "14%", textAlign: "center" }]}>P75</Text>
+              <Text style={[styles.tableHeaderCell, { width: "14%", textAlign: "center" }]}>Death</Text>
+            </View>
+            {(bm.pensionSalaryBandStats ?? []).map((sb, i) => (
+              <View key={sb.salaryBand} style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+                <Text style={[styles.tableCell, { width: "30%" }]}>{sb.salaryBandLabel}</Text>
+                <Text style={[styles.tableCell, { width: "14%", textAlign: "center" }]}>{sb.companyCount}</Text>
+                <Text style={[styles.tableCell, { width: "14%", textAlign: "center" }]}>
+                  {sb.contributionStats ? `${sb.contributionStats.p25}%` : "—"}
+                </Text>
+                <Text style={[styles.tableCell, { width: "14%", textAlign: "center" }]}>
+                  {sb.contributionStats ? `${sb.contributionStats.median}%` : "—"}
+                </Text>
+                <Text style={[styles.tableCell, { width: "14%", textAlign: "center" }]}>
+                  {sb.contributionStats ? `${sb.contributionStats.p75}%` : "—"}
+                </Text>
+                <Text style={[styles.tableCell, { width: "14%", textAlign: "center" }]}>
+                  {sb.deathBenefitStats ? `${sb.deathBenefitStats.median}x` : "—"}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      <PageFooter />
+    </Page>
+  );
+}
+
 function PlatformPage({ data }: { data: ReportData }) {
   const { singleCountryData, config } = data;
   const bm = singleCountryData;
@@ -1181,6 +1313,9 @@ export function BenchmarkReportDocument({ data }: { data: ReportData }) {
       {/* Cost Analysis */}
       {data.config.includeCostAnalysis && <CostAnalysisPage data={data} />}
       {data.config.includeCostAnalysis && <FundingPage data={data} />}
+
+      {/* Pension Benchmarking */}
+      <PensionBenchmarkPage data={data} />
 
       {/* Platform Benchmarks */}
       {data.config.includePlatformBenchmarks && <PlatformPage data={data} />}

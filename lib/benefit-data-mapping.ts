@@ -40,6 +40,12 @@ export function prismaEntryToCompanyBenefitData(
     dentalOrthoIncluded: boolean | null;
     pensionEmployerPct: number | null;
     pensionEmployeePct: number | null;
+    pensionPlanType: string | null;
+    pensionContributionRateEmployer: number | null;
+    pensionContributionRateEmployee: number | null;
+    pensionDeathBenefitMultiple: number | null;
+    pensionDeathBenefitType: string | null;
+    pensionFormulaType: string | null;
     company?: { country: string };
   },
   fallbackCountry?: string
@@ -84,5 +90,11 @@ export function prismaEntryToCompanyBenefitData(
     dentalOrthoIncluded: e.dentalOrthoIncluded,
     pensionEmployerPct: e.pensionEmployerPct,
     pensionEmployeePct: e.pensionEmployeePct,
+    pensionPlanType: e.pensionPlanType,
+    pensionContributionRateEmployer: e.pensionContributionRateEmployer,
+    pensionContributionRateEmployee: e.pensionContributionRateEmployee,
+    pensionDeathBenefitMultiple: e.pensionDeathBenefitMultiple,
+    pensionDeathBenefitType: e.pensionDeathBenefitType,
+    pensionFormulaType: e.pensionFormulaType,
   };
 }

@@ -21,9 +21,11 @@ import {
   Upload,
   BookOpen,
   Search,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { NotificationBell } from "@/components/notification-bell";
 
 const clientNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -42,6 +44,10 @@ const adminNavItems = [
   { href: "/admin/submissions", label: "Submissions", icon: ClipboardList },
   { href: "/admin/benchmarks", label: "Benchmark Data", icon: Database },
   { href: "/admin/reference-data", label: "Reference Data", icon: BookOpen },
+  { href: "/admin/baseline", label: "Baseline Data", icon: Database },
+  { href: "/admin/sources", label: "Source Library", icon: BookOpen },
+  { href: "/admin/reviews", label: "Data Reviews", icon: RefreshCw },
+  { href: "/admin/baseline/import-pdf", label: "PDF Import", icon: FileCheck },
   { href: "/data-explorer", label: "Data Explorer", icon: Search },
   { href: "/admin/upload", label: "Bulk Upload", icon: Upload },
 ];
@@ -101,11 +107,14 @@ export function Sidebar() {
       </nav>
       <Separator className="bg-white/10" />
       <div className="p-4">
-        <div className="mb-3 px-3">
-          <p className="text-sm font-medium text-white">
-            {session?.user?.name}
-          </p>
-          <p className="text-xs text-white/70">{session?.user?.email}</p>
+        <div className="mb-3 flex items-center justify-between px-3">
+          <div>
+            <p className="text-sm font-medium text-white">
+              {session?.user?.name}
+            </p>
+            <p className="text-xs text-white/70">{session?.user?.email}</p>
+          </div>
+          <NotificationBell />
         </div>
         <Button
           variant="ghost"

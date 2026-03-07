@@ -16,6 +16,8 @@ import {
   type CiCategoryStats,
   type DentalCategoryStats,
   type PensionCategoryStats,
+  type PensionSalaryBandStats,
+  SALARY_BAND_LABELS,
 } from "./benchmarking-types";
 import { type CurrencyRateMap, convertCurrency } from "./currency";
 import { BENEFIT_CATEGORY_LABELS } from "./utils";
@@ -295,22 +297,88 @@ export function calculateCategoryBenchmarks(
     if (category === "PENSION" && meetsMinimum) {
       const employerPcts: number[] = [];
       const employeePcts: number[] = [];
+      const totalContributions: number[] = [];
+      const deathBenefitMultiples: number[] = [];
+      const planTypeCounts = new Map<string, number>();
+      const formulaTypeCounts = new Map<string, number>();
+      const deathBenefitTypeCounts = new Map<string, number>();
+      let employerOnlyCount = 0;
+      let employerPlusEmployeeCount = 0;
+      let belowThresholdCount = 0;
 
       for (const e of entries) {
+        // Use new contribution rate fields, falling back to legacy fields
+        const erRate = e.pensionContributionRateEmployer ?? e.pensionEmployerPct;
+        const eeRate = e.pensionContributionRateEmployee ?? e.pensionEmployeePct;
+
         if (e.pensionEmployerPct !== null && e.pensionEmployerPct !== undefined) {
           employerPcts.push(e.pensionEmployerPct);
         }
         if (e.pensionEmployeePct !== null && e.pensionEmployeePct !== undefined) {
           employeePcts.push(e.pensionEmployeePct);
         }
+
+        if (erRate !== null && erRate !== undefined) {
+          const total = erRate + (eeRate ?? 0);
+          totalContributions.push(total);
+
+          if (eeRate === null || eeRate === undefined || eeRate === 0) {
+            employerOnlyCount++;
+          } else {
+            employerPlusEmployeeCount++;
+          }
+
+          if (erRate < 3) {
+            belowThresholdCount++;
+          }
+        }
+
+        if (e.pensionDeathBenefitMultiple !== null && e.pensionDeathBenefitMultiple !== undefined) {
+          deathBenefitMultiples.push(e.pensionDeathBenefitMultiple);
+        }
+
+        if (e.pensionPlanType) {
+          planTypeCounts.set(e.pensionPlanType, (planTypeCounts.get(e.pensionPlanType) || 0) + 1);
+        }
+        if (e.pensionFormulaType) {
+          formulaTypeCounts.set(e.pensionFormulaType, (formulaTypeCounts.get(e.pensionFormulaType) || 0) + 1);
+        }
+        if (e.pensionDeathBenefitType) {
+          deathBenefitTypeCounts.set(e.pensionDeathBenefitType, (deathBenefitTypeCounts.get(e.pensionDeathBenefitType) || 0) + 1);
+        }
       }
+
+      const totalWithContrib = employerOnlyCount + employerPlusEmployeeCount;
+      const planTypeTotal = Array.from(planTypeCounts.values()).reduce((a, b) => a + b, 0);
+      const formulaTypeTotal = Array.from(formulaTypeCounts.values()).reduce((a, b) => a + b, 0);
+      const deathBenefitTypeTotal = Array.from(deathBenefitTypeCounts.values()).reduce((a, b) => a + b, 0);
 
       pensionStats = {
         employerPctStats: calculatePercentileStats(employerPcts),
         employeePctStats: calculatePercentileStats(employeePcts),
+        totalContributionStats: calculatePercentileStats(totalContributions),
+        deathBenefitMultipleStats: calculatePercentileStats(deathBenefitMultiples),
+        planTypeBreakdown: Array.from(planTypeCounts.entries()).map(([type, count]) => ({
+          type,
+          count,
+          percentage: planTypeTotal > 0 ? Math.round((count / planTypeTotal) * 100) : 0,
+        })),
+        employerOnlyPct: totalWithContrib > 0 ? Math.round((employerOnlyCount / totalWithContrib) * 100) : 0,
+        employerPlusEmployeePct: totalWithContrib > 0 ? Math.round((employerPlusEmployeeCount / totalWithContrib) * 100) : 0,
+        belowThresholdPct: totalWithContrib > 0 ? Math.round((belowThresholdCount / totalWithContrib) * 100) : 0,
+        formulaTypeBreakdown: Array.from(formulaTypeCounts.entries()).map(([type, count]) => ({
+          type,
+          count,
+          percentage: formulaTypeTotal > 0 ? Math.round((count / formulaTypeTotal) * 100) : 0,
+        })),
+        deathBenefitTypeBreakdown: Array.from(deathBenefitTypeCounts.entries()).map(([type, count]) => ({
+          type,
+          count,
+          percentage: deathBenefitTypeTotal > 0 ? Math.round((count / deathBenefitTypeTotal) * 100) : 0,
+        })),
       };
 
-      if (!pensionStats.employerPctStats && !pensionStats.employeePctStats) {
+      if (!pensionStats.employerPctStats && !pensionStats.employeePctStats && !pensionStats.totalContributionStats) {
         pensionStats = null;
       }
     }
@@ -612,6 +680,13 @@ export function calculateCompanyPosition(
     // Pension detail values
     let pensionEmployerPct: number | null = null;
     let pensionEmployeePct: number | null = null;
+    let pensionPlanType: string | null = null;
+    let pensionContributionRateEmployer: number | null = null;
+    let pensionContributionRateEmployee: number | null = null;
+    let pensionTotalContributionRate: number | null = null;
+    let pensionDeathBenefitMultiple: number | null = null;
+    let pensionDeathBenefitType: string | null = null;
+    let pensionFormulaType: string | null = null;
 
     if (bm.category === "PENSION" && myEntries.length > 0) {
       for (const e of myEntries) {
@@ -621,6 +696,29 @@ export function calculateCompanyPosition(
         if (e.pensionEmployeePct !== null && e.pensionEmployeePct !== undefined && pensionEmployeePct === null) {
           pensionEmployeePct = e.pensionEmployeePct;
         }
+        if (e.pensionPlanType && pensionPlanType === null) {
+          pensionPlanType = e.pensionPlanType;
+        }
+        if (e.pensionContributionRateEmployer !== null && e.pensionContributionRateEmployer !== undefined && pensionContributionRateEmployer === null) {
+          pensionContributionRateEmployer = e.pensionContributionRateEmployer;
+        }
+        if (e.pensionContributionRateEmployee !== null && e.pensionContributionRateEmployee !== undefined && pensionContributionRateEmployee === null) {
+          pensionContributionRateEmployee = e.pensionContributionRateEmployee;
+        }
+        if (e.pensionDeathBenefitMultiple !== null && e.pensionDeathBenefitMultiple !== undefined && pensionDeathBenefitMultiple === null) {
+          pensionDeathBenefitMultiple = e.pensionDeathBenefitMultiple;
+        }
+        if (e.pensionDeathBenefitType && pensionDeathBenefitType === null) {
+          pensionDeathBenefitType = e.pensionDeathBenefitType;
+        }
+        if (e.pensionFormulaType && pensionFormulaType === null) {
+          pensionFormulaType = e.pensionFormulaType;
+        }
+      }
+      const erRate = pensionContributionRateEmployer ?? pensionEmployerPct;
+      const eeRate = pensionContributionRateEmployee ?? pensionEmployeePct;
+      if (erRate !== null) {
+        pensionTotalContributionRate = erRate + (eeRate ?? 0);
       }
     }
 
@@ -654,6 +752,13 @@ export function calculateCompanyPosition(
       dentalOrthoIncluded,
       pensionEmployerPct,
       pensionEmployeePct,
+      pensionPlanType,
+      pensionContributionRateEmployer,
+      pensionContributionRateEmployee,
+      pensionTotalContributionRate,
+      pensionDeathBenefitMultiple,
+      pensionDeathBenefitType,
+      pensionFormulaType,
     };
   });
 }
@@ -663,7 +768,7 @@ export function calculateCompanyPosition(
  * Returns matching companyIds set.
  */
 export function filterCompanyIds(
-  allCompanies: { id: string; country: string; industry: string; employeeCountRange: string | null }[],
+  allCompanies: { id: string; country: string; industry: string; employeeCountRange: string | null; salaryBand?: string | null }[],
   filters: BenchmarkFilters,
   grouping: BenchmarkGrouping
 ): Set<string> {
@@ -680,8 +785,65 @@ export function filterCompanyIds(
         if (filters.sizeBand && filters.sizeBand !== "all") {
           if (c.employeeCountRange !== filters.sizeBand) return false;
         }
+        // Salary band filter
+        if (filters.salaryBand && filters.salaryBand !== "all") {
+          if (c.salaryBand !== filters.salaryBand) return false;
+        }
         return true;
       })
       .map((c) => c.id)
   );
+}
+
+/**
+ * Calculate pension contribution/death-benefit stats grouped by salary band.
+ */
+export function calculatePensionSalaryBandStats(
+  pensionEntries: CompanyBenefitData[],
+  companyCountryProfiles: { companyId: string; salaryBand: string | null }[]
+): PensionSalaryBandStats[] {
+  const profileMap = new Map<string, string>();
+  for (const p of companyCountryProfiles) {
+    if (p.salaryBand) profileMap.set(p.companyId, p.salaryBand);
+  }
+
+  const bandData = new Map<string, { contributions: number[]; deathBenefits: number[]; companyIds: Set<string> }>();
+
+  for (const e of pensionEntries) {
+    const band = profileMap.get(e.companyId);
+    if (!band) continue;
+
+    if (!bandData.has(band)) {
+      bandData.set(band, { contributions: [], deathBenefits: [], companyIds: new Set() });
+    }
+    const bucket = bandData.get(band)!;
+    bucket.companyIds.add(e.companyId);
+
+    const erRate = e.pensionContributionRateEmployer ?? e.pensionEmployerPct;
+    if (erRate !== null && erRate !== undefined) {
+      const total = erRate + (e.pensionContributionRateEmployee ?? e.pensionEmployeePct ?? 0);
+      bucket.contributions.push(total);
+    }
+    if (e.pensionDeathBenefitMultiple !== null && e.pensionDeathBenefitMultiple !== undefined) {
+      bucket.deathBenefits.push(e.pensionDeathBenefitMultiple);
+    }
+  }
+
+  const bandOrder = ["UNDER_35K", "BAND_35K_50K", "BAND_50K_75K", "BAND_75K_100K", "OVER_100K"];
+  const results: PensionSalaryBandStats[] = [];
+
+  for (const band of bandOrder) {
+    const bucket = bandData.get(band);
+    if (!bucket || bucket.companyIds.size === 0) continue;
+
+    results.push({
+      salaryBand: band,
+      salaryBandLabel: SALARY_BAND_LABELS[band] || band,
+      contributionStats: calculatePercentileStats(bucket.contributions),
+      deathBenefitStats: calculatePercentileStats(bucket.deathBenefits),
+      companyCount: bucket.companyIds.size,
+    });
+  }
+
+  return results;
 }

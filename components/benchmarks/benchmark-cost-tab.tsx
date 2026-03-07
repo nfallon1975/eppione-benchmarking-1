@@ -9,24 +9,16 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
 import { ChartWrapper } from "./chart-wrapper";
+import { DonutChart, DonutLegend } from "./donut-chart";
 import type { BenchmarkResult } from "@/lib/benchmarking-types";
 import { BENEFIT_CATEGORY_LABELS, formatCurrency } from "@/lib/utils";
+import { BRAND, CHART_FONT, GRID_STYLE, ANIMATION, DONUT_COLORS } from "./chart-colors";
 
 interface BenchmarkCostTabProps {
   data: BenchmarkResult;
 }
-
-const COLORS = [
-  "#00B4D8", "#0077B6", "#023E8A", "#48CAE4", "#90E0EF",
-  "#ADE8F4", "#CAF0F8", "#5B8DEE", "#7C3AED", "#F59E0B",
-  "#10B981", "#EF4444", "#6366F1", "#8B5CF6", "#EC4899",
-  "#94A3B8",
-];
 
 export function BenchmarkCostTab({ data }: BenchmarkCostTabProps) {
   const { categories, companyPosition, targetCurrency } = data;
@@ -51,10 +43,8 @@ export function BenchmarkCostTab({ data }: BenchmarkCostTabProps) {
         name: BENEFIT_CATEGORY_LABELS[cat.category]?.split(" ")[0] || cat.category,
         fullName: BENEFIT_CATEGORY_LABELS[cat.category] || cat.category,
         yourCost: pos?.yourCostConverted || 0,
-        marketAvg: cat.costStats?.mean || 0,
         median: cat.costStats?.median || 0,
         p75: cat.costStats?.p75 || 0,
-        marketMax: cat.costStats?.max || 0,
       };
     });
 
@@ -68,7 +58,7 @@ export function BenchmarkCostTab({ data }: BenchmarkCostTabProps) {
       employeePct: 100 - cat.pctEmployerFunded,
     }));
 
-  // Pie chart: cost distribution by category (your company)
+  // Donut: cost distribution by category (your company)
   const pieData = companyPosition
     ? companyPosition
         .filter((p) => p.yourCostConverted && p.yourCostConverted > 0)
@@ -77,6 +67,8 @@ export function BenchmarkCostTab({ data }: BenchmarkCostTabProps) {
           value: p.yourCostConverted || 0,
         }))
     : [];
+
+  const totalCostForDonut = pieData.reduce((s, d) => s + d.value, 0);
 
   return (
     <div className="space-y-6">
@@ -87,19 +79,28 @@ export function BenchmarkCostTab({ data }: BenchmarkCostTabProps) {
         downloadFilename="total-cost-comparison"
       >
         <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={totalBarData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" />
+          <BarChart data={totalBarData} layout="vertical" barSize={28}>
+            <CartesianGrid horizontal={false} {...GRID_STYLE} />
             <XAxis
               type="number"
-              fontSize={12}
+              fontSize={CHART_FONT.axis}
               tickFormatter={(v) => formatCurrency(v, targetCurrency)}
+              stroke="#94a3b8"
             />
-            <YAxis type="category" dataKey="name" fontSize={12} width={120} />
+            <YAxis
+              type="category"
+              dataKey="name"
+              fontSize={CHART_FONT.axis}
+              width={120}
+              stroke="#94a3b8"
+              tick={{ fill: BRAND.primary }}
+            />
             <Tooltip
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               formatter={(value: any) => formatCurrency(Number(value) || 0, targetCurrency)}
+              contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
             />
-            <Bar dataKey="cost" fill="#00B4D8" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="cost" fill={BRAND.accent} radius={[0, 6, 6, 0]} animationDuration={ANIMATION.duration} />
           </BarChart>
         </ResponsiveContainer>
       </ChartWrapper>
@@ -107,7 +108,7 @@ export function BenchmarkCostTab({ data }: BenchmarkCostTabProps) {
       {/* Category comparison */}
       <ChartWrapper
         title="Cost by Category"
-        description="Your cost vs market average, median, P75, and max per category"
+        description="Your cost vs market median and P75 per category"
         downloadFilename="category-cost-comparison"
       >
         {categoryBarData.length === 0 ? (
@@ -116,12 +117,13 @@ export function BenchmarkCostTab({ data }: BenchmarkCostTabProps) {
           </p>
         ) : (
           <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={categoryBarData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" fontSize={12} />
+            <BarChart data={categoryBarData} barGap={2}>
+              <CartesianGrid {...GRID_STYLE} />
+              <XAxis dataKey="name" fontSize={CHART_FONT.axis} stroke="#94a3b8" tick={{ fill: BRAND.primary }} />
               <YAxis
-                fontSize={12}
+                fontSize={CHART_FONT.axis}
                 tickFormatter={(v) => formatCurrency(v, targetCurrency)}
+                stroke="#94a3b8"
               />
               <Tooltip
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,13 +135,12 @@ export function BenchmarkCostTab({ data }: BenchmarkCostTabProps) {
                   const item = categoryBarData.find((d) => d.name === label);
                   return item?.fullName || label;
                 }}
+                contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
               />
-              <Legend />
-              <Bar dataKey="yourCost" name="Your Cost" fill="#00B4D8" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="marketAvg" name="Market Average" fill="#64748b" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="median" name="Median" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="p75" name="P75" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="marketMax" name="Market Max" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+              <Legend wrapperStyle={{ fontSize: CHART_FONT.label }} />
+              <Bar dataKey="yourCost" name="Your Cost" fill={BRAND.highlight} stroke={BRAND.primary} strokeWidth={1} radius={[4, 4, 0, 0]} animationDuration={ANIMATION.duration} />
+              <Bar dataKey="median" name="Median" fill={BRAND.accent} radius={[4, 4, 0, 0]} animationDuration={ANIMATION.duration} />
+              <Bar dataKey="p75" name="P75" fill={BRAND.primary} radius={[4, 4, 0, 0]} animationDuration={ANIMATION.duration} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -157,24 +158,25 @@ export function BenchmarkCostTab({ data }: BenchmarkCostTabProps) {
           ) : (
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={fundingData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" fontSize={11} />
-                <YAxis fontSize={12} domain={[0, 100]} />
+                <CartesianGrid {...GRID_STYLE} />
+                <XAxis dataKey="name" fontSize={CHART_FONT.label} stroke="#94a3b8" />
+                <YAxis fontSize={CHART_FONT.axis} domain={[0, 100]} stroke="#94a3b8" />
                 <Tooltip
                   labelFormatter={(label) => {
                     const item = fundingData.find((d) => d.name === label);
                     return item?.fullName || label;
                   }}
+                  contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
                 />
-                <Legend />
-                <Bar dataKey="employerPct" name="Employer %" fill="#00B4D8" stackId="a" />
-                <Bar dataKey="employeePct" name="Employee %" fill="#e2e8f0" stackId="a" />
+                <Legend wrapperStyle={{ fontSize: CHART_FONT.label }} />
+                <Bar dataKey="employerPct" name="Employer %" fill={BRAND.accent} stackId="a" animationDuration={ANIMATION.duration} />
+                <Bar dataKey="employeePct" name="Employee %" fill="#e2e8f0" stackId="a" radius={[4, 4, 0, 0]} animationDuration={ANIMATION.duration} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </ChartWrapper>
 
-        {/* Cost distribution pie */}
+        {/* Cost distribution donut */}
         <ChartWrapper
           title="Your Cost Distribution"
           description="How your benefits spend is allocated"
@@ -183,27 +185,23 @@ export function BenchmarkCostTab({ data }: BenchmarkCostTabProps) {
           {pieData.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-500">No cost data for your company.</p>
           ) : (
-            <ResponsiveContainer width="100%" height={350}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={120}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  label={({ name, percent }: any) => `${name || ""} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                  fontSize={11}
-                >
-                  {pieData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <Tooltip formatter={(value: any) => formatCurrency(Number(value) || 0, targetCurrency)} />
-              </PieChart>
-            </ResponsiveContainer>
+            <>
+              <DonutChart
+                data={pieData}
+                size={280}
+                innerLabel="Total"
+                innerValue={formatCurrency(totalCostForDonut, targetCurrency)}
+                colors={DONUT_COLORS}
+                tooltipFormatter={(value) => formatCurrency(Number(value) || 0, targetCurrency)}
+              />
+              <DonutLegend
+                data={pieData.map((d) => ({
+                  name: d.name,
+                  value: totalCostForDonut > 0 ? Math.round((d.value / totalCostForDonut) * 100) : 0,
+                }))}
+                colors={DONUT_COLORS}
+              />
+            </>
           )}
         </ChartWrapper>
       </div>

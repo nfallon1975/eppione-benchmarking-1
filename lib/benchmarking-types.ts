@@ -4,6 +4,7 @@ export interface BenchmarkFilters {
   country: string;
   industry?: string;
   sizeBand?: string;
+  salaryBand?: string;
 }
 
 export type BenchmarkGrouping = "country_industry" | "country_only" | "industry_only";
@@ -48,6 +49,49 @@ export interface CompanyBenefitData {
   // Pension
   pensionEmployerPct: number | null;
   pensionEmployeePct: number | null;
+  pensionPlanType: string | null;
+  pensionContributionRateEmployer: number | null;
+  pensionContributionRateEmployee: number | null;
+  pensionDeathBenefitMultiple: number | null;
+  pensionDeathBenefitType: string | null;
+  pensionFormulaType: string | null;
+}
+
+export const SALARY_BAND_LABELS: Record<string, string> = {
+  UNDER_35K: "Under 35,000",
+  BAND_35K_50K: "35,000 - 50,000",
+  BAND_50K_75K: "50,000 - 75,000",
+  BAND_75K_100K: "75,000 - 100,000",
+  OVER_100K: "100,000+",
+};
+
+export const PLAN_TYPE_LABELS: Record<string, string> = {
+  DC: "Defined Contribution",
+  DB: "Defined Benefit",
+  CASH_BALANCE: "Cash Balance",
+  HYBRID: "Hybrid",
+};
+
+export const DEATH_BENEFIT_TYPE_LABELS: Record<string, string> = {
+  ACCUMULATED_RESERVES: "Accumulated Reserves",
+  FIXED_MULTIPLE: "Fixed Multiple",
+  MIXED: "Mixed",
+  NONE: "None",
+};
+
+export const PENSION_FORMULA_TYPE_LABELS: Record<string, string> = {
+  FLAT_RATE: "Flat Rate",
+  STEP_RATE: "Step Rate",
+  SALARY_LINKED: "Salary Linked",
+  OTHER: "Other",
+};
+
+export function classifySalaryBand(salary: number): string {
+  if (salary < 35000) return "UNDER_35K";
+  if (salary < 50000) return "BAND_35K_50K";
+  if (salary < 75000) return "BAND_50K_75K";
+  if (salary < 100000) return "BAND_75K_100K";
+  return "OVER_100K";
 }
 
 export interface PlatformData {
@@ -111,6 +155,14 @@ export interface DentalCategoryStats {
 export interface PensionCategoryStats {
   employerPctStats: PercentileStats | null;
   employeePctStats: PercentileStats | null;
+  totalContributionStats: PercentileStats | null;
+  deathBenefitMultipleStats: PercentileStats | null;
+  planTypeBreakdown: { type: string; count: number; percentage: number }[];
+  employerOnlyPct: number;
+  employerPlusEmployeePct: number;
+  belowThresholdPct: number; // % below 3% employer contribution
+  formulaTypeBreakdown: { type: string; count: number; percentage: number }[];
+  deathBenefitTypeBreakdown: { type: string; count: number; percentage: number }[];
 }
 
 export interface CategoryBenchmark {
@@ -175,6 +227,13 @@ export interface CompanyPosition {
   // Pension
   pensionEmployerPct: number | null;
   pensionEmployeePct: number | null;
+  pensionPlanType: string | null;
+  pensionContributionRateEmployer: number | null;
+  pensionContributionRateEmployee: number | null;
+  pensionTotalContributionRate: number | null;
+  pensionDeathBenefitMultiple: number | null;
+  pensionDeathBenefitType: string | null;
+  pensionFormulaType: string | null;
 }
 
 export interface PlatformBenchmark {
@@ -189,10 +248,19 @@ export interface PlatformBenchmark {
 
 export type DataQuality = "industry" | "cross_industry" | "reference";
 
+export interface PensionSalaryBandStats {
+  salaryBand: string;
+  salaryBandLabel: string;
+  contributionStats: PercentileStats | null;
+  deathBenefitStats: PercentileStats | null;
+  companyCount: number;
+}
+
 export interface BenchmarkResult {
   country: string;
   industry: string | null;
   sizeBand: string | null;
+  salaryBand: string | null;
   grouping: BenchmarkGrouping;
   targetCurrency: string;
   totalCompanies: number;
@@ -201,7 +269,9 @@ export interface BenchmarkResult {
   categories: CategoryBenchmark[];
   companyPosition: CompanyPosition[] | null;
   platform: PlatformBenchmark;
+  pensionSalaryBandStats?: PensionSalaryBandStats[];
   dataAsOf: string; // ISO date string of most recent surveyCompletedAt
   dataQuality?: DataQuality;
   dataQualityMessage?: string;
+  baselineSources?: string[]; // attribution for baseline data
 }

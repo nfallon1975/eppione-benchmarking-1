@@ -234,6 +234,7 @@ export async function GET(
       country,
       industry,
       sizeBand: null,
+      salaryBand: null,
       grouping,
       targetCurrency,
       totalCompanies,

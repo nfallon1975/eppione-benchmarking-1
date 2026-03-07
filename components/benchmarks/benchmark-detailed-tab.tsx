@@ -19,9 +19,14 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PercentileBar } from "./percentile-bar";
-import type { BenchmarkResult, CategoryBenchmark, CompanyPosition, PercentileStats } from "@/lib/benchmarking-types";
+import { PercentileRangeInline } from "./percentile-range-chart";
+import { DonutChart, DonutLegend } from "./donut-chart";
+import { StackedSalaryBandChart } from "./stacked-salary-band-chart";
+import { ChartWrapper } from "./chart-wrapper";
+import type { BenchmarkResult, CategoryBenchmark, CompanyPosition, PercentileStats, PensionSalaryBandStats } from "@/lib/benchmarking-types";
+import { PLAN_TYPE_LABELS, DEATH_BENEFIT_TYPE_LABELS, PENSION_FORMULA_TYPE_LABELS, SALARY_BAND_LABELS } from "@/lib/benchmarking-types";
 import { BENEFIT_CATEGORY_LABELS, formatCurrency, getPercentileColor, getPercentileBgColor, cn } from "@/lib/utils";
+import { BRAND } from "./chart-colors";
 
 interface BenchmarkDetailedTabProps {
   data: BenchmarkResult;
@@ -178,26 +183,37 @@ export function BenchmarkDetailedTab({ data }: BenchmarkDetailedTabProps) {
         </CardContent>
       </Card>
 
-      {/* Percentile bars for categories that meet minimum */}
-      <div className="space-y-4">
-        {categories
-          .filter((cat) => cat.meetsMinimum && cat.costStats)
-          .map((cat) => {
-            const pos = companyPosition?.find((p) => p.category === cat.category);
-            return (
-              <Card key={cat.category}>
-                <CardContent className="pt-4">
-                  <p className="mb-2 text-sm font-medium">{BENEFIT_CATEGORY_LABELS[cat.category]}</p>
-                  <PercentileBar
-                    stats={cat.costStats!}
+      {/* Percentile range bars for categories that meet minimum */}
+      <ChartWrapper
+        title="Percentile Positioning"
+        description="Your cost position within the P25-P75 range per category"
+        downloadFilename="percentile-positioning"
+      >
+        <div className="space-y-5 pt-2">
+          {categories
+            .filter((cat) => cat.meetsMinimum && cat.costStats)
+            .map((cat) => {
+              const pos = companyPosition?.find((p) => p.category === cat.category);
+              const s = cat.costStats!;
+              return (
+                <div key={cat.category}>
+                  <p className="mb-1 text-sm font-medium" style={{ color: BRAND.primary }}>
+                    {BENEFIT_CATEGORY_LABELS[cat.category]}
+                  </p>
+                  <PercentileRangeInline
+                    p25={s.p25}
+                    median={s.median}
+                    p75={s.p75}
+                    min={s.min}
+                    max={s.max}
                     yourValue={pos?.yourCostConverted}
-                    currency={targetCurrency}
+                    formatValue={(v) => formatCurrency(v, targetCurrency)}
                   />
-                </CardContent>
-              </Card>
-            );
-          })}
-      </div>
+                </div>
+              );
+            })}
+        </div>
+      </ChartWrapper>
 
       {/* Category-specific Plan Details */}
       <CategoryDetailsCard
@@ -205,6 +221,9 @@ export function BenchmarkDetailedTab({ data }: BenchmarkDetailedTabProps) {
         companyPosition={companyPosition}
         targetCurrency={targetCurrency}
       />
+
+      {/* Pension Breakdown Cards */}
+      <PensionBreakdownCard data={data} />
     </div>
   );
 }
@@ -343,8 +362,10 @@ function CategoryDetailsCard({
     const pos = companyPosition?.find((p) => p.category === "PENSION");
     const ps = pensionCat.pensionStats;
     const metrics: CategoryMetric[] = [
-      { label: "Employer Contribution %", stats: ps?.employerPctStats ?? null, yourValue: pos?.pensionEmployerPct ?? null, formatType: "percent" },
-      { label: "Employee Contribution %", stats: ps?.employeePctStats ?? null, yourValue: pos?.pensionEmployeePct ?? null, formatType: "percent" },
+      { label: "Employer Contribution %", stats: ps?.employerPctStats ?? null, yourValue: pos?.pensionContributionRateEmployer ?? pos?.pensionEmployerPct ?? null, formatType: "percent" },
+      { label: "Employee Contribution %", stats: ps?.employeePctStats ?? null, yourValue: pos?.pensionContributionRateEmployee ?? pos?.pensionEmployeePct ?? null, formatType: "percent" },
+      { label: "Total Contribution %", stats: ps?.totalContributionStats ?? null, yourValue: pos?.pensionTotalContributionRate ?? null, formatType: "percent" },
+      { label: "Death Benefit Multiple", stats: ps?.deathBenefitMultipleStats ?? null, yourValue: pos?.pensionDeathBenefitMultiple ?? null, formatType: "multiple" },
     ];
     if (metrics.some((m) => m.stats !== null || m.yourValue !== null)) {
       sections.push({ title: "Pension Plan Details", description: "Comparison of pension contributions across the market", metrics, companyCount: pensionCat.companyCount });
@@ -429,16 +450,31 @@ function CategoryDetailsCard({
               <div className="mt-6 space-y-4">
                 {section.metrics
                   .filter((m) => m.stats !== null)
-                  .map((m) => (
-                    <div key={m.label}>
-                      <p className="mb-1 text-sm font-medium text-slate-700">{m.label}</p>
-                      <PercentileBar
-                        stats={m.stats!}
-                        yourValue={m.yourValue}
-                        currency={m.formatType === "currency" ? targetCurrency : m.formatType === "percent" ? "%" : m.formatType === "multiple" ? "x" : ""}
-                      />
-                    </div>
-                  ))}
+                  .map((m) => {
+                    const s = m.stats!;
+                    const fmtFn =
+                      m.formatType === "currency"
+                        ? (v: number) => formatCurrency(v, targetCurrency)
+                        : m.formatType === "percent"
+                          ? (v: number) => `${v}%`
+                          : m.formatType === "multiple"
+                            ? (v: number) => `${v}x`
+                            : (v: number) => `${Math.round(v)}`;
+                    return (
+                      <div key={m.label}>
+                        <p className="mb-1 text-sm font-medium" style={{ color: BRAND.primary }}>{m.label}</p>
+                        <PercentileRangeInline
+                          p25={s.p25}
+                          median={s.median}
+                          p75={s.p75}
+                          min={s.min}
+                          max={s.max}
+                          yourValue={m.yourValue}
+                          formatValue={fmtFn}
+                        />
+                      </div>
+                    );
+                  })}
               </div>
             )}
             {!section.metrics.some((m) => m.stats !== null) && (
@@ -449,6 +485,190 @@ function CategoryDetailsCard({
           </CardContent>
         </Card>
       ))}
+    </>
+  );
+}
+
+function PensionBreakdownCard({ data }: { data: BenchmarkResult }) {
+  const pensionCat = data.categories.find((c) => c.category === "PENSION");
+  if (!pensionCat || !pensionCat.meetsMinimum) return null;
+
+  const ps = pensionCat.pensionStats;
+  if (!ps) return null;
+
+  const hasPlanTypes = ps.planTypeBreakdown.length > 0;
+  const hasFormulaTypes = ps.formulaTypeBreakdown.length > 0;
+  const hasDeathBenefitTypes = ps.deathBenefitTypeBreakdown.length > 0;
+  const hasSalaryBandStats = (data.pensionSalaryBandStats ?? []).length > 0;
+
+  if (!hasPlanTypes && !hasFormulaTypes && !hasDeathBenefitTypes && !hasSalaryBandStats && ps.employerOnlyPct === 0 && ps.employerPlusEmployeePct === 0) {
+    return null;
+  }
+
+  // Donut data for plan types
+  const planTypeDonut = ps.planTypeBreakdown.map((pt) => ({
+    name: PLAN_TYPE_LABELS[pt.type] || pt.type,
+    value: pt.percentage,
+  }));
+
+  // Donut data for contribution structure
+  const contribStructDonut = [
+    { name: "Employer Only", value: ps.employerOnlyPct },
+    { name: "Employer + Employee", value: ps.employerPlusEmployeePct },
+  ];
+
+  // Donut data for formula types
+  const formulaDonut = ps.formulaTypeBreakdown.map((ft) => ({
+    name: PENSION_FORMULA_TYPE_LABELS[ft.type] || ft.type,
+    value: ft.percentage,
+  }));
+
+  // Donut data for death benefit types
+  const deathBenefitDonut = ps.deathBenefitTypeBreakdown.map((dt) => ({
+    name: DEATH_BENEFIT_TYPE_LABELS[dt.type] || dt.type,
+    value: dt.percentage,
+  }));
+
+  // Stacked salary band chart data
+  const salaryBandChartData = (data.pensionSalaryBandStats ?? [])
+    .filter((sb) => sb.contributionStats)
+    .map((sb) => {
+      // Use median employer/employee split from the contribution data
+      // We approximate: if total contribution median exists, split based on overall ratio
+      const totalMedian = sb.contributionStats?.median ?? 0;
+      const overallEmployerPct = ps.employerPctStats?.median ?? totalMedian;
+      const overallEmployeePct = ps.employeePctStats?.median ?? 0;
+      const overallTotal = overallEmployerPct + overallEmployeePct || 1;
+      return {
+        band: sb.salaryBand,
+        bandLabel: sb.salaryBandLabel,
+        employerPct: Math.round((overallEmployerPct / overallTotal) * totalMedian * 10) / 10,
+        employeePct: Math.round((overallEmployeePct / overallTotal) * totalMedian * 10) / 10,
+        companyCount: sb.companyCount,
+      };
+    });
+
+  return (
+    <>
+      {/* Pension Market Structure — Donut charts */}
+      {(hasPlanTypes || ps.employerOnlyPct > 0 || ps.belowThresholdPct > 0) && (
+        <ChartWrapper
+          title="Pension Market Structure"
+          description="Plan types, contribution structure, and threshold analysis"
+          downloadFilename="pension-market-structure"
+        >
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {hasPlanTypes && (
+              <div className="text-center">
+                <p className="mb-3 text-sm font-semibold" style={{ color: BRAND.primary }}>Plan Type Split</p>
+                <DonutChart
+                  data={planTypeDonut}
+                  size={180}
+                  colors={[BRAND.accent, BRAND.primary, BRAND.secondary, BRAND.highlight]}
+                />
+                <DonutLegend
+                  data={planTypeDonut}
+                  colors={[BRAND.accent, BRAND.primary, BRAND.secondary, BRAND.highlight]}
+                />
+              </div>
+            )}
+            <div className="text-center">
+              <p className="mb-3 text-sm font-semibold" style={{ color: BRAND.primary }}>Contribution Structure</p>
+              <DonutChart
+                data={contribStructDonut}
+                size={180}
+                innerLabel="Below 3%"
+                innerValue={`${ps.belowThresholdPct}%`}
+                colors={[BRAND.accent, "#e2e8f0"]}
+              />
+              <DonutLegend
+                data={contribStructDonut}
+                colors={[BRAND.accent, "#e2e8f0"]}
+              />
+            </div>
+            {hasFormulaTypes && (
+              <div className="text-center">
+                <p className="mb-3 text-sm font-semibold" style={{ color: BRAND.primary }}>Formula Type</p>
+                <DonutChart
+                  data={formulaDonut}
+                  size={180}
+                  colors={[BRAND.primary, BRAND.teal, BRAND.secondary, BRAND.amber]}
+                />
+                <DonutLegend
+                  data={formulaDonut}
+                  colors={[BRAND.primary, BRAND.teal, BRAND.secondary, BRAND.amber]}
+                />
+              </div>
+            )}
+          </div>
+
+          {hasDeathBenefitTypes && (
+            <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+              <p className="mb-3 text-sm font-semibold" style={{ color: BRAND.primary }}>Death Benefit Type</p>
+              <div className="mx-auto max-w-xs">
+                <DonutChart
+                  data={deathBenefitDonut}
+                  size={180}
+                  colors={[BRAND.primary, BRAND.accent, BRAND.secondary, BRAND.highlight]}
+                />
+                <DonutLegend
+                  data={deathBenefitDonut}
+                  colors={[BRAND.primary, BRAND.accent, BRAND.secondary, BRAND.highlight]}
+                />
+              </div>
+            </div>
+          )}
+        </ChartWrapper>
+      )}
+
+      {/* Salary band analysis — stacked bar chart + data table */}
+      {hasSalaryBandStats && (
+        <ChartWrapper
+          title="Pension Contributions by Salary Band"
+          description="Median employer + employee contribution rates by salary band"
+          downloadFilename="pension-salary-bands"
+        >
+          {salaryBandChartData.length > 0 && (
+            <StackedSalaryBandChart data={salaryBandChartData} />
+          )}
+
+          {/* Data table below chart */}
+          <div className="mt-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Salary Band</TableHead>
+                  <TableHead className="text-center">Companies</TableHead>
+                  <TableHead className="text-center">Contrib P25</TableHead>
+                  <TableHead className="text-center">Contrib Median</TableHead>
+                  <TableHead className="text-center">Contrib P75</TableHead>
+                  <TableHead className="text-center">Death Benefit Median</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(data.pensionSalaryBandStats ?? []).map((sb) => (
+                  <TableRow key={sb.salaryBand}>
+                    <TableCell className="font-medium">{sb.salaryBandLabel}</TableCell>
+                    <TableCell className="text-center">{sb.companyCount}</TableCell>
+                    <TableCell className="text-center">
+                      {sb.contributionStats ? `${sb.contributionStats.p25}%` : <span className="text-slate-400">--</span>}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {sb.contributionStats ? `${sb.contributionStats.median}%` : <span className="text-slate-400">--</span>}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {sb.contributionStats ? `${sb.contributionStats.p75}%` : <span className="text-slate-400">--</span>}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {sb.deathBenefitStats ? `${sb.deathBenefitStats.median}x` : <span className="text-slate-400">--</span>}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </ChartWrapper>
+      )}
     </>
   );
 }

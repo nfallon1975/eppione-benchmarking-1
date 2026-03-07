@@ -72,6 +72,12 @@ export interface BenefitFormData {
   // Pension
   pensionEmployerPct: number | null;
   pensionEmployeePct: number | null;
+  pensionPlanType: string;
+  pensionContributionRateEmployer: number | null;
+  pensionContributionRateEmployee: number | null;
+  pensionDeathBenefitMultiple: number | null;
+  pensionDeathBenefitType: string;
+  pensionFormulaType: string;
   // Broker
   brokerName: string;
   brokerSatisfactionScore: number | null;
@@ -180,6 +186,12 @@ export function createEmptyBenefit(currency: string = "EUR"): BenefitFormData {
     dentalOrthoIncluded: null,
     pensionEmployerPct: null,
     pensionEmployeePct: null,
+    pensionPlanType: "",
+    pensionContributionRateEmployer: null,
+    pensionContributionRateEmployee: null,
+    pensionDeathBenefitMultiple: null,
+    pensionDeathBenefitType: "",
+    pensionFormulaType: "",
     brokerName: "",
     brokerSatisfactionScore: null,
     renewalDate: "",

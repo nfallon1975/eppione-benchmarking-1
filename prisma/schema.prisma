@@ -102,6 +102,35 @@ enum SurveyStatus {
   SUBMITTED
 }
 
+enum SalaryBand {
+  UNDER_35K
+  BAND_35K_50K
+  BAND_50K_75K
+  BAND_75K_100K
+  OVER_100K
+}
+
+enum PlanType {
+  DC
+  DB
+  CASH_BALANCE
+  HYBRID
+}
+
+enum DeathBenefitType {
+  ACCUMULATED_RESERVES
+  FIXED_MULTIPLE
+  MIXED
+  NONE
+}
+
+enum PensionFormulaType {
+  FLAT_RATE
+  STEP_RATE
+  SALARY_LINKED
+  OTHER
+}
+
 model User {
   id             String       @id @default(cuid())
   email          String       @unique
@@ -120,6 +149,14 @@ model User {
   contributedRequirements CountryBenefitRequirement[]
   contributedLimits       CountryStatutoryLimit[]
   apiKeys                 ApiKey[]
+  baselineImports         BaselineDataSource[] @relation("BaselineImporter")
+  addedSources            DataSourceReference[] @relation("SourceAdder")
+  verifiedSources         DataSourceReference[] @relation("SourceVerifier")
+  reviewCyclesRun         MonthlyReviewCycle[]  @relation("ReviewRunner")
+  reviewedFindings        MonthlyReviewFinding[] @relation("FindingReviewer")
+  dataPointChanges        DataPointHistory[]    @relation("HistoryChanger")
+  notifications           Notification[]
+  pdfIngestions           PDFIngestion[]    @relation("PDFUploader")
   createdAt               DateTime   @default(now())
   updatedAt               DateTime   @updatedAt
 
@@ -205,6 +242,7 @@ model CompanyCountryProfile {
   averageSalaryCurrency String?
   averageBonusPercent   Float?
   financialYearEndMonth Int?     // 1-12
+  salaryBand            SalaryBand?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -261,6 +299,12 @@ model BenefitEntry {
   // Pension
   pensionEmployerPct          Float?
   pensionEmployeePct          Float?
+  pensionPlanType             PlanType?
+  pensionContributionRateEmployer  Float?    // percentage
+  pensionContributionRateEmployee  Float?    // percentage, nullable
+  pensionDeathBenefitMultiple Float?          // e.g. 2.0 for "2x salary"
+  pensionDeathBenefitType     DeathBenefitType?
+  pensionFormulaType          PensionFormulaType?
   // Broker
   brokerName                  String?
   brokerSatisfactionScore     Int?            // 1-10
@@ -514,4 +558,421 @@ model ReferenceBenchmark {
 
   @@unique([country, benefitCategory])
   @@index([country])
+}
+
+// ── Source Referencing & Data Confidence ──
+
+enum SourceType {
+  LEGISLATION
+  GOVERNMENT_REPORT
+  INDUSTRY_SURVEY
+  INSURER_REPORT
+  CONSULTANCY_REPORT
+  TRADE_BODY
+  REGULATOR_PUBLICATION
+  NEWS_ARTICLE
+  ACADEMIC_PAPER
+  EMPLOYER_ASSOCIATION
+  TAX_AUTHORITY
+  OTHER
+}
+
+enum SourceReliability {
+  OFFICIAL
+  HIGH
+  MEDIUM
+  LOW
+  UNVERIFIED
+}
+
+enum LinkedDataType {
+  BASELINE_BENCHMARK
+  COMPLIANCE_REQUIREMENT
+  STATUTORY_LIMIT
+  BROKER_CONTRIBUTION
+}
+
+enum SourceRelevance {
+  PRIMARY
+  SUPPORTING
+  CROSS_REFERENCE
+}
+
+enum FindingType {
+  VALUE_CHANGED
+  NEW_DATA_AVAILABLE
+  SOURCE_EXPIRED
+  SOURCE_UPDATED
+  CONFLICTING_DATA
+  NEW_REGULATION
+  DATA_CONFIRMED
+  SOURCE_UNAVAILABLE
+  NEW_SOURCE_DISCOVERED
+}
+
+enum FindingSeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum FindingStatus {
+  PENDING_REVIEW
+  ACCEPTED
+  REJECTED
+  DEFERRED
+}
+
+enum ReviewCycleStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum ChangeType {
+  CREATED
+  UPDATED
+  SOURCE_ADDED
+  SOURCE_REMOVED
+  CONFIDENCE_RECALCULATED
+  VERIFIED
+  FLAGGED
+  DEACTIVATED
+}
+
+model DataSourceReference {
+  id                    String            @id @default(cuid())
+  type                  SourceType
+  title                 String
+  publisher             String
+  country               String?
+  url                   String?
+  publicationDate       DateTime?
+  accessDate            DateTime          @default(now())
+  isPubliclyAccessible  Boolean           @default(true)
+  summary               String            @db.Text
+  reliability           SourceReliability @default(UNVERIFIED)
+  isActive              Boolean           @default(true)
+  addedById             String
+  addedBy               User              @relation("SourceAdder", fields: [addedById], references: [id])
+  lastVerifiedAt        DateTime?
+  lastVerifiedById      String?
+  lastVerifiedBy        User?             @relation("SourceVerifier", fields: [lastVerifiedById], references: [id])
+  verificationNotes     String?           @db.Text
+  sourceLinks           DataPointSourceLink[]
+  reviewFindings        MonthlyReviewFinding[] @relation("FindingSource")
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@index([country])
+  @@index([type])
+  @@index([reliability])
+}
+
+model DataPointSourceLink {
+  id                String              @id @default(cuid())
+  sourceId          String
+  source            DataSourceReference @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  linkedType        LinkedDataType
+  linkedId          String
+  relevance         SourceRelevance     @default(PRIMARY)
+  specificCitation  String?             @db.Text
+  extractedValue    String?
+  notes             String?             @db.Text
+  createdAt         DateTime            @default(now())
+
+  @@index([sourceId])
+  @@index([linkedType, linkedId])
+}
+
+model DataConfidenceScore {
+  id                  String    @id @default(cuid())
+  linkedType          LinkedDataType
+  linkedId            String
+  overallConfidence   Float
+  recencyScore        Float
+  sourceQualityScore  Float
+  corroborationScore  Float
+  consistencyScore    Float
+  calculatedAt        DateTime  @default(now())
+  calculationMethod   String    // "AI_REVIEW", "MANUAL", "SYSTEM"
+  reasoning           String?   @db.Text
+  flagged             Boolean   @default(false)
+  flagReason          String?   @db.Text
+
+  @@unique([linkedType, linkedId])
+  @@index([linkedType, linkedId])
+  @@index([flagged])
+}
+
+model MonthlyReviewCycle {
+  id                       String              @id @default(cuid())
+  month                    String              // "2026-03"
+  status                   ReviewCycleStatus   @default(SCHEDULED)
+  startedAt                DateTime?
+  completedAt              DateTime?
+  countriesReviewed        String[]
+  totalDataPointsReviewed  Int                 @default(0)
+  totalUpdatesFound        Int                 @default(0)
+  totalFlagsRaised         Int                 @default(0)
+  totalSourcesChecked      Int                 @default(0)
+  newSourcesDiscovered     Int                 @default(0)
+  aiCostEstimate           Float?
+  runById                  String?
+  runBy                    User?               @relation("ReviewRunner", fields: [runById], references: [id])
+  summary                  String?             @db.Text
+  findings                 MonthlyReviewFinding[]
+  dataPointHistories       DataPointHistory[]
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  @@unique([month])
+  @@index([status])
+}
+
+model MonthlyReviewFinding {
+  id                  String              @id @default(cuid())
+  reviewCycleId       String
+  reviewCycle         MonthlyReviewCycle   @relation(fields: [reviewCycleId], references: [id], onDelete: Cascade)
+  findingType         FindingType
+  country             String
+  benefitCategory     BenefitCategory?
+  industry            String?
+  linkedType          LinkedDataType?
+  linkedId            String?
+  currentValue        String?
+  suggestedValue      String?
+  sourceReferenceId   String?
+  sourceReference     DataSourceReference? @relation("FindingSource", fields: [sourceReferenceId], references: [id])
+  newSourceUrl        String?
+  confidence          Float
+  severity            FindingSeverity
+  aiReasoning         String              @db.Text
+  status              FindingStatus       @default(PENDING_REVIEW)
+  reviewedById        String?
+  reviewedBy          User?               @relation("FindingReviewer", fields: [reviewedById], references: [id])
+  reviewedAt          DateTime?
+  reviewNotes         String?             @db.Text
+  createdAt           DateTime            @default(now())
+
+  @@index([reviewCycleId])
+  @@index([status])
+  @@index([severity])
+  @@index([country])
+}
+
+model DataPointHistory {
+  id              String    @id @default(cuid())
+  linkedType      LinkedDataType
+  linkedId        String
+  changeType      ChangeType
+  previousValue   String?
+  newValue        String?
+  changedById     String?
+  changedBy       User?     @relation("HistoryChanger", fields: [changedById], references: [id])
+  changeSource    String    // "MANUAL", "PDF_IMPORT", "MONTHLY_REVIEW", "BROKER_CONTRIBUTION", "ADMIN_EDIT"
+  reviewCycleId   String?
+  reviewCycle     MonthlyReviewCycle? @relation(fields: [reviewCycleId], references: [id])
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+
+  @@index([linkedType, linkedId])
+  @@index([reviewCycleId])
+}
+
+// ── Notifications ──
+
+enum NotificationType {
+  REVIEW_CRITICAL
+  REVIEW_HIGH
+  REVIEW_COMPLETE
+  REGULATORY_UPDATE
+  SOURCE_EXPIRED
+  COMPLIANCE_CHANGE
+  SYSTEM
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  title       String
+  message     String           @db.Text
+  linkUrl     String?
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+// ── Review Scheduling ──
+
+model ReviewScheduleConfig {
+  id                  String    @id @default("default")
+  enabled             Boolean   @default(true)
+  dayOfMonth          Int       @default(1)     // 1-28
+  priorityCountries   String[]                  // reviewed every month
+  secondaryCountries  String[]                  // reviewed quarterly
+  monthlyBudgetCap    Float     @default(50)
+  lastRunAt           DateTime?
+  nextRunAt           DateTime?
+  updatedAt           DateTime  @updatedAt
+}
+
+// ── PDF Ingestion ──
+
+enum IngestionStatus {
+  UPLOADED
+  PROCESSING
+  REVIEW_READY
+  APPROVED
+  REJECTED
+  ERROR
+}
+
+enum ExtractedPointStatus {
+  EXTRACTED
+  CONFIRMED
+  EDITED
+  REJECTED
+}
+
+model PDFIngestion {
+  id                    String           @id @default(cuid())
+  filename              String
+  fileHash              String?
+  filePath              String?          // stored file path
+  pageCount             Int?
+  uploadedById          String
+  uploadedBy            User             @relation("PDFUploader", fields: [uploadedById], references: [id])
+  uploadedAt            DateTime         @default(now())
+  status                IngestionStatus  @default(UPLOADED)
+  sourceCountry         String?
+  sourceName            String?
+  sourcePublisher       String?
+  sourceYear            Int?
+  sourceType            BaselineSourceType?
+  licenseNotes          String?          @db.Text
+  aiExtractionLog       Json?
+  reviewNotes           String?          @db.Text
+  linkedBaselineSourceId String?
+  linkedBaselineSource  BaselineDataSource? @relation(fields: [linkedBaselineSourceId], references: [id])
+  extractedPoints       ExtractedDataPoint[]
+  errorMessage          String?          @db.Text
+  processingCost        Float?
+  createdAt             DateTime         @default(now())
+
+  @@index([status])
+  @@index([uploadedById])
+  @@index([fileHash])
+}
+
+model ExtractedDataPoint {
+  id                String               @id @default(cuid())
+  ingestionId       String
+  ingestion         PDFIngestion         @relation(fields: [ingestionId], references: [id], onDelete: Cascade)
+  pageNumber        Int
+  rawText           String               @db.Text
+  country           String
+  industry          String?
+  benefitCategory   BenefitCategory
+  metricType        BaselineMetricType
+  metricLabel       String
+  value             Float
+  unit              String
+  currency          String?
+  percentile25      Float?
+  percentile75      Float?
+  salaryBand        String?
+  companySize       String?
+  aiConfidence      Float
+  status            ExtractedPointStatus @default(EXTRACTED)
+  adminEditedValue  Float?
+  notes             String?              @db.Text
+  createdAt         DateTime             @default(now())
+
+  @@index([ingestionId])
+  @@index([status])
+}
+
+enum BaselineSourceType {
+  INDUSTRY_SURVEY
+  INSURER_REPORT
+  GOVERNMENT_DATA
+  CONSULTANCY_REPORT
+  TRADE_BODY
+  OTHER
+}
+
+enum BaselineMetricType {
+  PREVALENCE
+  MEDIAN_CONTRIBUTION_RATE
+  AVERAGE_CONTRIBUTION_RATE
+  MEDIAN_COST_PER_EMPLOYEE
+  AVERAGE_COST_PER_EMPLOYEE
+  PLAN_TYPE_SPLIT_DC
+  PLAN_TYPE_SPLIT_DB
+  DEATH_BENEFIT_MULTIPLE
+  EMPLOYER_FUNDING_RATE
+  COVER_LEVEL_MEDIAN
+  PLATFORM_ADOPTION_RATE
+  SPOUSE_COVER_PREVALENCE
+  DEPENDENT_COVER_PREVALENCE
+  REPLACEMENT_RATIO
+  CUSTOM
+}
+
+model BaselineDataSource {
+  id            String             @id @default(cuid())
+  name          String             // e.g. "IAPF Benefits Survey 2024"
+  publisher     String             // e.g. "Irish Association of Pension Funds"
+  country       String             // ISO code
+  year          Int
+  sampleSize    Int?
+  sourceUrl     String?
+  sourceType    BaselineSourceType
+  importedAt    DateTime           @default(now())
+  importedById  String
+  importedBy    User               @relation("BaselineImporter", fields: [importedById], references: [id])
+  isActive      Boolean            @default(true)
+  notes         String?            @db.Text
+  licenseNotes  String             @default("")  @db.Text
+  benchmarks    BaselineBenchmark[]
+  pdfIngestions PDFIngestion[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([country])
+  @@index([country, year])
+}
+
+model BaselineBenchmark {
+  id              String              @id @default(cuid())
+  sourceId        String
+  source          BaselineDataSource  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  country         String
+  industry        String?             // null = cross-industry
+  industryNACE    String?
+  companySize     String?
+  salaryBand      String?
+  benefitCategory BenefitCategory
+  metricType      BaselineMetricType
+  metricLabel     String
+  value           Float
+  unit            String              // "percent", "currency", "multiple", "ratio"
+  currency        String?
+  percentile25    Float?
+  percentile75    Float?
+  notes           String?             @db.Text
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([sourceId])
+  @@index([country, benefitCategory])
+  @@index([country, benefitCategory, metricType])
 }
