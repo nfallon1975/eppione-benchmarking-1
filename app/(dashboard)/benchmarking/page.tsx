@@ -49,13 +49,18 @@ export default function BenchmarkingPage() {
         if (!res.ok) return;
         const data = await res.json();
 
-        // Determine countries
-        const companyCountries: string[] = [];
+        // Determine countries from profiles, benefits, and company country
+        const countrySet = new Set<string>();
         if (data.countryProfiles && data.countryProfiles.length > 0) {
-          companyCountries.push(...data.countryProfiles.map((p: { country: string }) => p.country));
-        } else {
-          companyCountries.push(data.country);
+          data.countryProfiles.forEach((p: { country: string }) => countrySet.add(p.country));
         }
+        if (data.benefitEntries) {
+          data.benefitEntries.forEach((b: { country?: string }) => {
+            if (b.country) countrySet.add(b.country);
+          });
+        }
+        if (data.country) countrySet.add(data.country);
+        const companyCountries = Array.from(countrySet);
 
         setCountries(companyCountries);
         setCountry(companyCountries[0] || data.country);
@@ -116,10 +121,20 @@ export default function BenchmarkingPage() {
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4">
-        {countries.length > 1 && (
+        {countries.length > 0 && (
           <CountrySelector
             value={country}
-            onChange={setCountry}
+            onChange={async (c) => {
+              setCountry(c);
+              try {
+                const configRes = await fetch(`/api/country-config?country=${c}`);
+                if (configRes.ok) {
+                  const config = await configRes.json();
+                  setLocalCurrency(config.currency || "EUR");
+                  setCurrency(config.currency || "EUR");
+                }
+              } catch { /* fallback */ }
+            }}
             countries={countries}
           />
         )}

@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
       include: {
         benefitEntries: true,
         platformInfo: true,
+        countryProfiles: true,
       },
     });
 
