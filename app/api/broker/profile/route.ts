@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== "BROKER") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const profile = await prisma.brokerProfile.findUnique({
@@ -15,12 +15,12 @@ export async function GET() {
     });
 
     if (!profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+      return NextResponse.json({ error: "No broker profile found" }, { status: 404 });
     }
 
     return NextResponse.json(profile);
   } catch (error) {
-    console.error("Error fetching broker profile:", error);
+    console.error("GET /api/broker/profile error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
