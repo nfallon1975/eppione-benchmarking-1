@@ -69,16 +69,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createSchema.parse(body);
 
-    const profile = await prisma.brokerProfile.findUnique({
-      where: { userId: session.user.id },
-    });
-    if (!profile?.countriesActive.includes(data.country)) {
-      return NextResponse.json(
-        { error: "You are not active in this country" },
-        { status: 403 }
-      );
-    }
-
     const limit = await prisma.countryStatutoryLimit.create({
       data: {
         country: data.country,

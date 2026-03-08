@@ -101,25 +101,11 @@ export default function BrokerCompliancePage() {
   const [editLimit, setEditLimit] = useState<LimitItem | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  // Get broker's active countries
-  const [brokerCountries, setBrokerCountries] = useState<string[]>([]);
-
   useEffect(() => {
     if (session?.user?.role !== "BROKER") {
       router.push("/dashboard");
-      return;
     }
-    // Fetch broker profile to get countriesActive
-    fetch("/api/broker/profile")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.countriesActive?.length > 0) {
-          setBrokerCountries(data.countriesActive);
-          if (!selectedCountry) setSelectedCountry(data.countriesActive[0]);
-        }
-      })
-      .catch(console.error);
-  }, [session, router, selectedCountry]);
+  }, [session, router]);
 
   const fetchData = useCallback(async () => {
     if (!selectedCountry) return;
@@ -188,7 +174,7 @@ export default function BrokerCompliancePage() {
         <CountryPicker
           value={selectedCountry}
           onChange={setSelectedCountry}
-          limitTo={brokerCountries.length > 0 ? brokerCountries : undefined}
+          limitTo={undefined}
           className="w-[280px]"
         />
         {selectedCountry && (
