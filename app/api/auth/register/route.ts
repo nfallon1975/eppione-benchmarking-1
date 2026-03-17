@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { notifyAdminNewRegistration, notifyBrokerClientAccepted } from "@/lib/email";
+import { validatePassword } from "@/lib/password";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { z } from "zod";
+
+const passwordSchema = z.string().refine(
+  (val: string) => validatePassword(val).valid,
+  { message: "Password must be at least 10 characters with uppercase, lowercase, digit, and special character" }
+);
 
 const clientRegisterSchema = z.object({
   role: z.literal("CLIENT").optional().default("CLIENT"),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: passwordSchema,
   name: z.string().min(1),
   companyName: z.string().min(1),
   country: z.string().length(2),
@@ -20,7 +27,7 @@ const clientRegisterSchema = z.object({
 const brokerRegisterSchema = z.object({
   role: z.literal("BROKER"),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: passwordSchema,
   name: z.string().min(1),
   companyName: z.string().min(1),
   licenseNumber: z.string().optional(),
@@ -30,6 +37,11 @@ const brokerRegisterSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 3 registrations per IP per hour
+    const ip = getClientIp(req);
+    const rateLimited = checkRateLimit(`register:${ip}`, 60 * 60 * 1000, 3);
+    if (rateLimited) return rateLimited;
+
     const body = await req.json();
     const role = body.role || "CLIENT";
 

@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@eppione.com";
 const EMAIL_FROM =
-  process.env.EMAIL_FROM || "Eppione Benchmarking <noreply@tailoredtravelbylisa.com>";
+  process.env.EMAIL_FROM || "Eppione Benchmarking <noreply@eppione.com>";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)

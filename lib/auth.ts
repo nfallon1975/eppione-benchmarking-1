@@ -4,6 +4,7 @@ import EmailProvider from "next-auth/providers/email";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "./db";
 import { compare } from "bcryptjs";
+import { checkRateLimit } from "./rate-limit";
 
 declare module "next-auth" {
   interface Session {
@@ -39,6 +40,7 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
   session: {
     strategy: "jwt",
+    maxAge: 8 * 60 * 60, // 8 hours — sensitive compensation data
   },
   pages: {
     signIn: "/login",
@@ -51,9 +53,19 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Email and password are required");
+        }
+
+        // Rate limit login attempts by email (5 per 15 minutes)
+        const rateLimited = checkRateLimit(
+          `login:${credentials.email.toLowerCase()}`,
+          15 * 60 * 1000,
+          5
+        );
+        if (rateLimited) {
+          throw new Error("Too many login attempts. Please try again in 15 minutes.");
         }
 
         const user = await prisma.user.findUnique({
@@ -64,13 +76,40 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid email or password");
         }
 
+        // Check account lockout
+        if (user.lockedUntil && user.lockedUntil > new Date()) {
+          const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+          throw new Error(`Account locked. Try again in ${minutesLeft} minutes.`);
+        }
+
         const isPasswordValid = await compare(
           credentials.password,
           user.passwordHash
         );
 
         if (!isPasswordValid) {
+          // Increment failed attempts
+          const attempts = (user.failedLoginAttempts || 0) + 1;
+          const lockout = attempts >= 5 ? new Date(Date.now() + 30 * 60 * 1000) : null;
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              failedLoginAttempts: attempts,
+              lockedUntil: lockout,
+            },
+          });
+          if (lockout) {
+            throw new Error("Account locked after too many failed attempts. Try again in 30 minutes.");
+          }
           throw new Error("Invalid email or password");
+        }
+
+        // Reset failed attempts on successful login
+        if (user.failedLoginAttempts > 0) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { failedLoginAttempts: 0, lockedUntil: null },
+          });
         }
 
         if (user.status === "PENDING") {
@@ -104,7 +143,7 @@ export const authOptions: NextAuthOptions = {
           server: smtp,
           from:
             process.env.EMAIL_FROM ||
-            "Eppione Benchmarking <noreply@tailoredtravelbylisa.com>",
+            "Eppione Benchmarking <noreply@eppione.com>",
         }),
       ];
     })(),

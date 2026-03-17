@@ -27,7 +27,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ShieldAlert, Users, Loader2, Key, FileText } from "lucide-react";
+import { ShieldAlert, Users, Loader2, Key, FileText, Download, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { COUNTRY_LABELS } from "@/lib/utils";
 
@@ -50,6 +53,32 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [confirmRevoke, setConfirmRevoke] = useState<BrokerRelationship | null>(null);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const res = await fetch("/api/auth/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        signOut({ callbackUrl: "/login" });
+      } else {
+        setDeleteError(data.error || "Failed to delete account");
+      }
+    } catch {
+      setDeleteError("Network error");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   const fetchBrokers = useCallback(async () => {
     try {
@@ -340,6 +369,92 @@ export default function SettingsPage() {
                 </>
               ) : (
                 "Revoke Access"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Data & Privacy Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5" />
+            Data & Privacy
+          </CardTitle>
+          <CardDescription>
+            Export your data or delete your account in accordance with GDPR.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-md border p-4">
+            <div>
+              <p className="text-sm font-medium">Export Your Data</p>
+              <p className="text-xs text-slate-500">Download all your company and benefits data as JSON. Limited to once per day.</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                window.location.href = "/api/auth/data-export";
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </Button>
+          </div>
+          <div className="flex items-center justify-between rounded-md border border-red-200 bg-red-50/50 p-4">
+            <div>
+              <p className="text-sm font-medium text-red-800">Delete Account</p>
+              <p className="text-xs text-red-600">Permanently delete your account and all associated data. This cannot be undone.</p>
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDeleteAccount(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Account
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Delete Account Confirmation Dialog */}
+      <Dialog open={showDeleteAccount} onOpenChange={setShowDeleteAccount}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Your Account</DialogTitle>
+            <DialogDescription>
+              This will permanently delete your account and all associated data. Enter your password to confirm.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">{deleteError}</div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="deletePassword">Password</Label>
+            <Input
+              id="deletePassword"
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="Enter your password"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => { setShowDeleteAccount(false); setDeletePassword(""); setDeleteError(""); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!deletePassword || deleting}
+              onClick={handleDeleteAccount}
+            >
+              {deleting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
+              ) : (
+                "Permanently Delete"
               )}
             </Button>
           </div>

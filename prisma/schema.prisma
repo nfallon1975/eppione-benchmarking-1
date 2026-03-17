@@ -144,6 +144,8 @@ model User {
   status         UserStatus   @default(PENDING)
   companyRole    CompanyRole?
   emailVerified  DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil    DateTime?
   companyId      String?
   company        Company?     @relation(fields: [companyId], references: [id])
   accounts                Account[]
