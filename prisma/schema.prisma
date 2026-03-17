@@ -77,6 +77,10 @@ enum BenefitCategory {
   TRANSPORT
   CHILDCARE
   EDUCATION
+  ANNUAL_LEAVE
+  SICK_PAY
+  MATERNITY_PAY
+  PATERNITY_PAY
   OTHER
 }
 
@@ -305,6 +309,37 @@ model BenefitEntry {
   pensionDeathBenefitMultiple Float?          // e.g. 2.0 for "2x salary"
   pensionDeathBenefitType     DeathBenefitType?
   pensionFormulaType          PensionFormulaType?
+  // Annual Leave
+  leaveDaysEntitlement        Int?
+  leaveIncludesPublicHolidays Boolean?
+  leaveIncreasesWithTenure    Boolean?
+  leaveMaxDays                Int?            // max days after tenure increases
+  leaveBuySellDays            Boolean?
+  leaveCarryOverDays          Int?            // days that can be carried over
+  leaveBirthdayOff            Boolean?
+  leaveVolunteerDays          Int?            // volunteer/charity days per year
+  leaveChristmasClosureDays   Int?            // company closure days at year end
+  // Sick Pay
+  sickPayFullPayWeeks         Int?
+  sickPayHalfPayWeeks         Int?
+  sickPayPartialPayPercent    Float?          // partial pay rate if not 50%
+  sickPayWaitingDays          Int?            // waiting days before sick pay starts
+  sickPayAboveStatutory       Boolean?
+  // Maternity Pay
+  maternityFullPayWeeks       Int?
+  maternityPartialPayWeeks    Int?
+  maternityPartialPayPercent  Float?
+  maternityTotalLeaveWeeks    Int?            // total leave offered (paid + unpaid)
+  maternityAboveStatutory     Boolean?
+  maternityKitDays            Int?            // Keeping In Touch days
+  maternityGradualReturn      Boolean?        // phased return option
+  // Paternity Pay
+  paternityFullPayWeeks       Int?
+  paternityPartialPayWeeks    Int?
+  paternityPartialPayPercent  Float?
+  paternityTotalLeaveWeeks    Int?            // total leave offered
+  paternityAboveStatutory     Boolean?
+  paternitySharedParentalLeave Boolean?       // shared parental leave available
   // Broker
   brokerName                  String?
   brokerSatisfactionScore     Int?            // 1-10

@@ -17,6 +17,10 @@ import {
   type DentalCategoryStats,
   type PensionCategoryStats,
   type PensionSalaryBandStats,
+  type AnnualLeaveCategoryStats,
+  type SickPayCategoryStats,
+  type MaternityPayCategoryStats,
+  type PaternityPayCategoryStats,
   SALARY_BAND_LABELS,
 } from "./benchmarking-types";
 import { type CurrencyRateMap, convertCurrency } from "./currency";
@@ -383,6 +387,147 @@ export function calculateCategoryBenchmarks(
       }
     }
 
+    // Annual Leave stats
+    let annualLeaveStats: AnnualLeaveCategoryStats | null = null;
+    if (category === "ANNUAL_LEAVE" && meetsMinimum) {
+      const days: number[] = [];
+      const carryOver: number[] = [];
+      const maxDays: number[] = [];
+      const volunteerDays: number[] = [];
+      const closureDays: number[] = [];
+      let pubHolCount = 0;
+      let tenureCount = 0;
+      let buySellCount = 0;
+      let birthdayCount = 0;
+      let totalWithData = 0;
+
+      for (const e of entries) {
+        if (e.leaveDaysEntitlement !== null && e.leaveDaysEntitlement !== undefined) days.push(e.leaveDaysEntitlement);
+        if (e.leaveCarryOverDays !== null && e.leaveCarryOverDays !== undefined) carryOver.push(e.leaveCarryOverDays);
+        if (e.leaveMaxDays !== null && e.leaveMaxDays !== undefined) maxDays.push(e.leaveMaxDays);
+        if (e.leaveVolunteerDays !== null && e.leaveVolunteerDays !== undefined) volunteerDays.push(e.leaveVolunteerDays);
+        if (e.leaveChristmasClosureDays !== null && e.leaveChristmasClosureDays !== undefined) closureDays.push(e.leaveChristmasClosureDays);
+        totalWithData++;
+        if (e.leaveIncludesPublicHolidays) pubHolCount++;
+        if (e.leaveIncreasesWithTenure) tenureCount++;
+        if (e.leaveBuySellDays) buySellCount++;
+        if (e.leaveBirthdayOff) birthdayCount++;
+      }
+
+      annualLeaveStats = {
+        daysEntitlementStats: calculatePercentileStats(days),
+        carryOverDaysStats: calculatePercentileStats(carryOver),
+        maxDaysStats: calculatePercentileStats(maxDays),
+        volunteerDaysStats: calculatePercentileStats(volunteerDays),
+        christmasClosureDaysStats: calculatePercentileStats(closureDays),
+        pctIncludesPublicHolidays: totalWithData > 0 ? Math.round((pubHolCount / totalWithData) * 100) : 0,
+        pctIncreasesWithTenure: totalWithData > 0 ? Math.round((tenureCount / totalWithData) * 100) : 0,
+        pctBuySellDays: totalWithData > 0 ? Math.round((buySellCount / totalWithData) * 100) : 0,
+        pctBirthdayOff: totalWithData > 0 ? Math.round((birthdayCount / totalWithData) * 100) : 0,
+      };
+
+      if (!annualLeaveStats.daysEntitlementStats) annualLeaveStats = null;
+    }
+
+    // Sick Pay stats
+    let sickPayStats: SickPayCategoryStats | null = null;
+    if (category === "SICK_PAY" && meetsMinimum) {
+      const fullPay: number[] = [];
+      const halfPay: number[] = [];
+      const partialPct: number[] = [];
+      const waitingDays: number[] = [];
+      let aboveStatCount = 0;
+      let totalWithData = 0;
+
+      for (const e of entries) {
+        if (e.sickPayFullPayWeeks !== null && e.sickPayFullPayWeeks !== undefined) fullPay.push(e.sickPayFullPayWeeks);
+        if (e.sickPayHalfPayWeeks !== null && e.sickPayHalfPayWeeks !== undefined) halfPay.push(e.sickPayHalfPayWeeks);
+        if (e.sickPayPartialPayPercent !== null && e.sickPayPartialPayPercent !== undefined) partialPct.push(e.sickPayPartialPayPercent);
+        if (e.sickPayWaitingDays !== null && e.sickPayWaitingDays !== undefined) waitingDays.push(e.sickPayWaitingDays);
+        totalWithData++;
+        if (e.sickPayAboveStatutory) aboveStatCount++;
+      }
+
+      sickPayStats = {
+        fullPayWeeksStats: calculatePercentileStats(fullPay),
+        halfPayWeeksStats: calculatePercentileStats(halfPay),
+        partialPayPercentStats: calculatePercentileStats(partialPct),
+        waitingDaysStats: calculatePercentileStats(waitingDays),
+        pctAboveStatutory: totalWithData > 0 ? Math.round((aboveStatCount / totalWithData) * 100) : 0,
+      };
+
+      if (!sickPayStats.fullPayWeeksStats && !sickPayStats.halfPayWeeksStats) sickPayStats = null;
+    }
+
+    // Maternity Pay stats
+    let maternityPayStats: MaternityPayCategoryStats | null = null;
+    if (category === "MATERNITY_PAY" && meetsMinimum) {
+      const fullPay: number[] = [];
+      const partialPay: number[] = [];
+      const partialPct: number[] = [];
+      const totalLeave: number[] = [];
+      const kitDays: number[] = [];
+      let aboveStatCount = 0;
+      let gradualReturnCount = 0;
+      let totalWithData = 0;
+
+      for (const e of entries) {
+        if (e.maternityFullPayWeeks !== null && e.maternityFullPayWeeks !== undefined) fullPay.push(e.maternityFullPayWeeks);
+        if (e.maternityPartialPayWeeks !== null && e.maternityPartialPayWeeks !== undefined) partialPay.push(e.maternityPartialPayWeeks);
+        if (e.maternityPartialPayPercent !== null && e.maternityPartialPayPercent !== undefined) partialPct.push(e.maternityPartialPayPercent);
+        if (e.maternityTotalLeaveWeeks !== null && e.maternityTotalLeaveWeeks !== undefined) totalLeave.push(e.maternityTotalLeaveWeeks);
+        if (e.maternityKitDays !== null && e.maternityKitDays !== undefined) kitDays.push(e.maternityKitDays);
+        totalWithData++;
+        if (e.maternityAboveStatutory) aboveStatCount++;
+        if (e.maternityGradualReturn) gradualReturnCount++;
+      }
+
+      maternityPayStats = {
+        fullPayWeeksStats: calculatePercentileStats(fullPay),
+        partialPayWeeksStats: calculatePercentileStats(partialPay),
+        partialPayPercentStats: calculatePercentileStats(partialPct),
+        totalLeaveWeeksStats: calculatePercentileStats(totalLeave),
+        kitDaysStats: calculatePercentileStats(kitDays),
+        pctAboveStatutory: totalWithData > 0 ? Math.round((aboveStatCount / totalWithData) * 100) : 0,
+        pctGradualReturn: totalWithData > 0 ? Math.round((gradualReturnCount / totalWithData) * 100) : 0,
+      };
+
+      if (!maternityPayStats.fullPayWeeksStats && !maternityPayStats.partialPayWeeksStats) maternityPayStats = null;
+    }
+
+    // Paternity Pay stats
+    let paternityPayStats: PaternityPayCategoryStats | null = null;
+    if (category === "PATERNITY_PAY" && meetsMinimum) {
+      const fullPay: number[] = [];
+      const partialPay: number[] = [];
+      const partialPct: number[] = [];
+      const totalLeave: number[] = [];
+      let aboveStatCount = 0;
+      let sharedParentalCount = 0;
+      let totalWithData = 0;
+
+      for (const e of entries) {
+        if (e.paternityFullPayWeeks !== null && e.paternityFullPayWeeks !== undefined) fullPay.push(e.paternityFullPayWeeks);
+        if (e.paternityPartialPayWeeks !== null && e.paternityPartialPayWeeks !== undefined) partialPay.push(e.paternityPartialPayWeeks);
+        if (e.paternityPartialPayPercent !== null && e.paternityPartialPayPercent !== undefined) partialPct.push(e.paternityPartialPayPercent);
+        if (e.paternityTotalLeaveWeeks !== null && e.paternityTotalLeaveWeeks !== undefined) totalLeave.push(e.paternityTotalLeaveWeeks);
+        totalWithData++;
+        if (e.paternityAboveStatutory) aboveStatCount++;
+        if (e.paternitySharedParentalLeave) sharedParentalCount++;
+      }
+
+      paternityPayStats = {
+        fullPayWeeksStats: calculatePercentileStats(fullPay),
+        partialPayWeeksStats: calculatePercentileStats(partialPay),
+        partialPayPercentStats: calculatePercentileStats(partialPct),
+        totalLeaveWeeksStats: calculatePercentileStats(totalLeave),
+        pctAboveStatutory: totalWithData > 0 ? Math.round((aboveStatCount / totalWithData) * 100) : 0,
+        pctSharedParentalLeave: totalWithData > 0 ? Math.round((sharedParentalCount / totalWithData) * 100) : 0,
+      };
+
+      if (!paternityPayStats.fullPayWeeksStats && !paternityPayStats.partialPayWeeksStats) paternityPayStats = null;
+    }
+
     const totalEntries = entries.length;
     results.push({
       category,
@@ -398,6 +543,10 @@ export function calculateCategoryBenchmarks(
       ciStats,
       dentalStats,
       pensionStats,
+      annualLeaveStats,
+      sickPayStats,
+      maternityPayStats,
+      paternityPayStats,
       pctEmployerFunded: totalEntries > 0
         ? Math.round((entries.filter((e) => e.employerFunded).length / totalEntries) * 100)
         : 0,
@@ -722,6 +871,84 @@ export function calculateCompanyPosition(
       }
     }
 
+    // Annual Leave detail values
+    let leaveDaysEntitlement: number | null = null;
+    let leaveIncludesPublicHolidays: boolean | null = null;
+    let leaveIncreasesWithTenure: boolean | null = null;
+    let leaveMaxDays: number | null = null;
+    let leaveBuySellDays: boolean | null = null;
+    let leaveCarryOverDays: number | null = null;
+    let leaveBirthdayOff: boolean | null = null;
+    let leaveVolunteerDays: number | null = null;
+    let leaveChristmasClosureDays: number | null = null;
+
+    if (bm.category === "ANNUAL_LEAVE" && myEntries.length > 0) {
+      const e = myEntries[0];
+      leaveDaysEntitlement = e.leaveDaysEntitlement;
+      leaveIncludesPublicHolidays = e.leaveIncludesPublicHolidays;
+      leaveIncreasesWithTenure = e.leaveIncreasesWithTenure;
+      leaveMaxDays = e.leaveMaxDays;
+      leaveBuySellDays = e.leaveBuySellDays;
+      leaveCarryOverDays = e.leaveCarryOverDays;
+      leaveBirthdayOff = e.leaveBirthdayOff;
+      leaveVolunteerDays = e.leaveVolunteerDays;
+      leaveChristmasClosureDays = e.leaveChristmasClosureDays;
+    }
+
+    // Sick Pay detail values
+    let sickPayFullPayWeeks: number | null = null;
+    let sickPayHalfPayWeeks: number | null = null;
+    let sickPayPartialPayPercent: number | null = null;
+    let sickPayWaitingDays: number | null = null;
+    let sickPayAboveStatutory: boolean | null = null;
+
+    if (bm.category === "SICK_PAY" && myEntries.length > 0) {
+      const e = myEntries[0];
+      sickPayFullPayWeeks = e.sickPayFullPayWeeks;
+      sickPayHalfPayWeeks = e.sickPayHalfPayWeeks;
+      sickPayPartialPayPercent = e.sickPayPartialPayPercent;
+      sickPayWaitingDays = e.sickPayWaitingDays;
+      sickPayAboveStatutory = e.sickPayAboveStatutory;
+    }
+
+    // Maternity Pay detail values
+    let maternityFullPayWeeks: number | null = null;
+    let maternityPartialPayWeeks: number | null = null;
+    let maternityPartialPayPercent: number | null = null;
+    let maternityTotalLeaveWeeks: number | null = null;
+    let maternityAboveStatutory: boolean | null = null;
+    let maternityKitDays: number | null = null;
+    let maternityGradualReturn: boolean | null = null;
+
+    if (bm.category === "MATERNITY_PAY" && myEntries.length > 0) {
+      const e = myEntries[0];
+      maternityFullPayWeeks = e.maternityFullPayWeeks;
+      maternityPartialPayWeeks = e.maternityPartialPayWeeks;
+      maternityPartialPayPercent = e.maternityPartialPayPercent;
+      maternityTotalLeaveWeeks = e.maternityTotalLeaveWeeks;
+      maternityAboveStatutory = e.maternityAboveStatutory;
+      maternityKitDays = e.maternityKitDays;
+      maternityGradualReturn = e.maternityGradualReturn;
+    }
+
+    // Paternity Pay detail values
+    let paternityFullPayWeeks: number | null = null;
+    let paternityPartialPayWeeks: number | null = null;
+    let paternityPartialPayPercent: number | null = null;
+    let paternityTotalLeaveWeeks: number | null = null;
+    let paternityAboveStatutory: boolean | null = null;
+    let paternitySharedParentalLeave: boolean | null = null;
+
+    if (bm.category === "PATERNITY_PAY" && myEntries.length > 0) {
+      const e = myEntries[0];
+      paternityFullPayWeeks = e.paternityFullPayWeeks;
+      paternityPartialPayWeeks = e.paternityPartialPayWeeks;
+      paternityPartialPayPercent = e.paternityPartialPayPercent;
+      paternityTotalLeaveWeeks = e.paternityTotalLeaveWeeks;
+      paternityAboveStatutory = e.paternityAboveStatutory;
+      paternitySharedParentalLeave = e.paternitySharedParentalLeave;
+    }
+
     return {
       category: bm.category,
       yourCost: totalCost,
@@ -759,6 +986,33 @@ export function calculateCompanyPosition(
       pensionDeathBenefitMultiple,
       pensionDeathBenefitType,
       pensionFormulaType,
+      leaveDaysEntitlement,
+      leaveIncludesPublicHolidays,
+      leaveIncreasesWithTenure,
+      leaveMaxDays,
+      leaveBuySellDays,
+      leaveCarryOverDays,
+      leaveBirthdayOff,
+      leaveVolunteerDays,
+      leaveChristmasClosureDays,
+      sickPayFullPayWeeks,
+      sickPayHalfPayWeeks,
+      sickPayPartialPayPercent,
+      sickPayWaitingDays,
+      sickPayAboveStatutory,
+      maternityFullPayWeeks,
+      maternityPartialPayWeeks,
+      maternityPartialPayPercent,
+      maternityTotalLeaveWeeks,
+      maternityAboveStatutory,
+      maternityKitDays,
+      maternityGradualReturn,
+      paternityFullPayWeeks,
+      paternityPartialPayWeeks,
+      paternityPartialPayPercent,
+      paternityTotalLeaveWeeks,
+      paternityAboveStatutory,
+      paternitySharedParentalLeave,
     };
   });
 }

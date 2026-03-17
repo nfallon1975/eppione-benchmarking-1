@@ -76,6 +76,37 @@ interface BenefitEntry {
   dentalOrthoIncluded: boolean | null;
   pensionEmployerPct: number | null;
   pensionEmployeePct: number | null;
+  // Annual Leave
+  leaveDaysEntitlement: number | null;
+  leaveIncludesPublicHolidays: boolean | null;
+  leaveIncreasesWithTenure: boolean | null;
+  leaveMaxDays: number | null;
+  leaveBuySellDays: boolean | null;
+  leaveCarryOverDays: number | null;
+  leaveBirthdayOff: boolean | null;
+  leaveVolunteerDays: number | null;
+  leaveChristmasClosureDays: number | null;
+  // Sick Pay
+  sickPayFullPayWeeks: number | null;
+  sickPayHalfPayWeeks: number | null;
+  sickPayPartialPayPercent: number | null;
+  sickPayWaitingDays: number | null;
+  sickPayAboveStatutory: boolean | null;
+  // Maternity Pay
+  maternityFullPayWeeks: number | null;
+  maternityPartialPayWeeks: number | null;
+  maternityPartialPayPercent: number | null;
+  maternityTotalLeaveWeeks: number | null;
+  maternityAboveStatutory: boolean | null;
+  maternityKitDays: number | null;
+  maternityGradualReturn: boolean | null;
+  // Paternity Pay
+  paternityFullPayWeeks: number | null;
+  paternityPartialPayWeeks: number | null;
+  paternityPartialPayPercent: number | null;
+  paternityTotalLeaveWeeks: number | null;
+  paternityAboveStatutory: boolean | null;
+  paternitySharedParentalLeave: boolean | null;
   brokerName: string | null;
   brokerSatisfactionScore: number | null;
   renewalDate: string | null;
@@ -120,6 +151,37 @@ const emptyForm = {
   dentalOrthoIncluded: false,
   pensionEmployerPct: "",
   pensionEmployeePct: "",
+  // Annual Leave
+  leaveDaysEntitlement: "",
+  leaveIncludesPublicHolidays: false,
+  leaveIncreasesWithTenure: false,
+  leaveMaxDays: "",
+  leaveBuySellDays: false,
+  leaveCarryOverDays: "",
+  leaveBirthdayOff: false,
+  leaveVolunteerDays: "",
+  leaveChristmasClosureDays: "",
+  // Sick Pay
+  sickPayFullPayWeeks: "",
+  sickPayHalfPayWeeks: "",
+  sickPayPartialPayPercent: "",
+  sickPayWaitingDays: "",
+  sickPayAboveStatutory: false,
+  // Maternity Pay
+  maternityFullPayWeeks: "",
+  maternityPartialPayWeeks: "",
+  maternityPartialPayPercent: "",
+  maternityTotalLeaveWeeks: "",
+  maternityAboveStatutory: false,
+  maternityKitDays: "",
+  maternityGradualReturn: false,
+  // Paternity Pay
+  paternityFullPayWeeks: "",
+  paternityPartialPayWeeks: "",
+  paternityPartialPayPercent: "",
+  paternityTotalLeaveWeeks: "",
+  paternityAboveStatutory: false,
+  paternitySharedParentalLeave: false,
   brokerName: "",
   brokerSatisfactionScore: "",
   renewalDate: "",
@@ -224,6 +286,33 @@ export default function BenefitsPage() {
       dentalOrthoIncluded: benefit.dentalOrthoIncluded ?? false,
       pensionEmployerPct: benefit.pensionEmployerPct?.toString() ?? "",
       pensionEmployeePct: benefit.pensionEmployeePct?.toString() ?? "",
+      leaveDaysEntitlement: benefit.leaveDaysEntitlement?.toString() ?? "",
+      leaveIncludesPublicHolidays: benefit.leaveIncludesPublicHolidays ?? false,
+      leaveIncreasesWithTenure: benefit.leaveIncreasesWithTenure ?? false,
+      leaveMaxDays: benefit.leaveMaxDays?.toString() ?? "",
+      leaveBuySellDays: benefit.leaveBuySellDays ?? false,
+      leaveCarryOverDays: benefit.leaveCarryOverDays?.toString() ?? "",
+      leaveBirthdayOff: benefit.leaveBirthdayOff ?? false,
+      leaveVolunteerDays: benefit.leaveVolunteerDays?.toString() ?? "",
+      leaveChristmasClosureDays: benefit.leaveChristmasClosureDays?.toString() ?? "",
+      sickPayFullPayWeeks: benefit.sickPayFullPayWeeks?.toString() ?? "",
+      sickPayHalfPayWeeks: benefit.sickPayHalfPayWeeks?.toString() ?? "",
+      sickPayPartialPayPercent: benefit.sickPayPartialPayPercent?.toString() ?? "",
+      sickPayWaitingDays: benefit.sickPayWaitingDays?.toString() ?? "",
+      sickPayAboveStatutory: benefit.sickPayAboveStatutory ?? false,
+      maternityFullPayWeeks: benefit.maternityFullPayWeeks?.toString() ?? "",
+      maternityPartialPayWeeks: benefit.maternityPartialPayWeeks?.toString() ?? "",
+      maternityPartialPayPercent: benefit.maternityPartialPayPercent?.toString() ?? "",
+      maternityTotalLeaveWeeks: benefit.maternityTotalLeaveWeeks?.toString() ?? "",
+      maternityAboveStatutory: benefit.maternityAboveStatutory ?? false,
+      maternityKitDays: benefit.maternityKitDays?.toString() ?? "",
+      maternityGradualReturn: benefit.maternityGradualReturn ?? false,
+      paternityFullPayWeeks: benefit.paternityFullPayWeeks?.toString() ?? "",
+      paternityPartialPayWeeks: benefit.paternityPartialPayWeeks?.toString() ?? "",
+      paternityPartialPayPercent: benefit.paternityPartialPayPercent?.toString() ?? "",
+      paternityTotalLeaveWeeks: benefit.paternityTotalLeaveWeeks?.toString() ?? "",
+      paternityAboveStatutory: benefit.paternityAboveStatutory ?? false,
+      paternitySharedParentalLeave: benefit.paternitySharedParentalLeave ?? false,
       brokerName: benefit.brokerName ?? "",
       brokerSatisfactionScore: benefit.brokerSatisfactionScore?.toString() ?? "",
       renewalDate: benefit.renewalDate ? benefit.renewalDate.split("T")[0] : "",
@@ -317,6 +406,33 @@ export default function BenefitsPage() {
       pensionEmployeePct: formData.pensionEmployeePct
         ? parseFloat(formData.pensionEmployeePct as string)
         : null,
+      leaveDaysEntitlement: formData.leaveDaysEntitlement ? parseInt(formData.leaveDaysEntitlement as string) : null,
+      leaveIncludesPublicHolidays: formData.leaveIncludesPublicHolidays || null,
+      leaveIncreasesWithTenure: formData.leaveIncreasesWithTenure || null,
+      leaveMaxDays: formData.leaveMaxDays ? parseInt(formData.leaveMaxDays as string) : null,
+      leaveBuySellDays: formData.leaveBuySellDays || null,
+      leaveCarryOverDays: formData.leaveCarryOverDays ? parseInt(formData.leaveCarryOverDays as string) : null,
+      leaveBirthdayOff: formData.leaveBirthdayOff || null,
+      leaveVolunteerDays: formData.leaveVolunteerDays ? parseInt(formData.leaveVolunteerDays as string) : null,
+      leaveChristmasClosureDays: formData.leaveChristmasClosureDays ? parseInt(formData.leaveChristmasClosureDays as string) : null,
+      sickPayFullPayWeeks: formData.sickPayFullPayWeeks ? parseInt(formData.sickPayFullPayWeeks as string) : null,
+      sickPayHalfPayWeeks: formData.sickPayHalfPayWeeks ? parseInt(formData.sickPayHalfPayWeeks as string) : null,
+      sickPayPartialPayPercent: formData.sickPayPartialPayPercent ? parseFloat(formData.sickPayPartialPayPercent as string) : null,
+      sickPayWaitingDays: formData.sickPayWaitingDays ? parseInt(formData.sickPayWaitingDays as string) : null,
+      sickPayAboveStatutory: formData.sickPayAboveStatutory || null,
+      maternityFullPayWeeks: formData.maternityFullPayWeeks ? parseInt(formData.maternityFullPayWeeks as string) : null,
+      maternityPartialPayWeeks: formData.maternityPartialPayWeeks ? parseInt(formData.maternityPartialPayWeeks as string) : null,
+      maternityPartialPayPercent: formData.maternityPartialPayPercent ? parseFloat(formData.maternityPartialPayPercent as string) : null,
+      maternityTotalLeaveWeeks: formData.maternityTotalLeaveWeeks ? parseInt(formData.maternityTotalLeaveWeeks as string) : null,
+      maternityAboveStatutory: formData.maternityAboveStatutory || null,
+      maternityKitDays: formData.maternityKitDays ? parseInt(formData.maternityKitDays as string) : null,
+      maternityGradualReturn: formData.maternityGradualReturn || null,
+      paternityFullPayWeeks: formData.paternityFullPayWeeks ? parseInt(formData.paternityFullPayWeeks as string) : null,
+      paternityPartialPayWeeks: formData.paternityPartialPayWeeks ? parseInt(formData.paternityPartialPayWeeks as string) : null,
+      paternityPartialPayPercent: formData.paternityPartialPayPercent ? parseFloat(formData.paternityPartialPayPercent as string) : null,
+      paternityTotalLeaveWeeks: formData.paternityTotalLeaveWeeks ? parseInt(formData.paternityTotalLeaveWeeks as string) : null,
+      paternityAboveStatutory: formData.paternityAboveStatutory || null,
+      paternitySharedParentalLeave: formData.paternitySharedParentalLeave || null,
       brokerName: formData.brokerName || null,
       brokerSatisfactionScore: formData.brokerSatisfactionScore
         ? parseInt(formData.brokerSatisfactionScore as string)
@@ -877,6 +993,159 @@ export default function BenefitsPage() {
                   <div className="space-y-2">
                     <Label>Employee Contribution (%)</Label>
                     <Input type="number" min={0} max={100} step={0.5} value={formData.pensionEmployeePct} onChange={(e) => updateField("pensionEmployeePct", e.target.value)} placeholder="e.g. 5" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formData.benefitCategory === "ANNUAL_LEAVE" && (
+              <div className="space-y-4 rounded-md border border-dashed border-emerald-200 bg-emerald-50/50 p-3">
+                <p className="text-sm font-medium text-emerald-800">Annual Leave Details</p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Standard Entitlement (days/year)</Label>
+                    <Input type="number" min={0} step={1} value={formData.leaveDaysEntitlement} onChange={(e) => updateField("leaveDaysEntitlement", e.target.value)} placeholder="e.g. 25" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Carry-Over Days Allowed</Label>
+                    <Input type="number" min={0} step={1} value={formData.leaveCarryOverDays} onChange={(e) => updateField("leaveCarryOverDays", e.target.value)} placeholder="e.g. 5" />
+                  </div>
+                  <div className="flex items-center gap-2 pt-6">
+                    <Switch checked={formData.leaveIncludesPublicHolidays as boolean} onCheckedChange={(v) => updateField("leaveIncludesPublicHolidays", v)} />
+                    <Label>Public Holidays Included</Label>
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={formData.leaveIncreasesWithTenure as boolean} onCheckedChange={(v) => updateField("leaveIncreasesWithTenure", v)} />
+                    <Label>Increases with Service</Label>
+                  </div>
+                  {formData.leaveIncreasesWithTenure && (
+                    <div className="space-y-2">
+                      <Label>Max Days (after increases)</Label>
+                      <Input type="number" min={0} step={1} value={formData.leaveMaxDays} onChange={(e) => updateField("leaveMaxDays", e.target.value)} placeholder="e.g. 30" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Switch checked={formData.leaveBuySellDays as boolean} onCheckedChange={(v) => updateField("leaveBuySellDays", v)} />
+                    <Label>Buy/Sell Days Available</Label>
+                  </div>
+                </div>
+                <p className="text-xs font-medium text-emerald-700 pt-1">Special Leave Features</p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={formData.leaveBirthdayOff as boolean} onCheckedChange={(v) => updateField("leaveBirthdayOff", v)} />
+                    <Label>Birthday Day Off</Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Volunteer/Charity Days (per year)</Label>
+                    <Input type="number" min={0} step={1} value={formData.leaveVolunteerDays} onChange={(e) => updateField("leaveVolunteerDays", e.target.value)} placeholder="e.g. 2" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Christmas/Year-End Closure Days</Label>
+                    <Input type="number" min={0} step={1} value={formData.leaveChristmasClosureDays} onChange={(e) => updateField("leaveChristmasClosureDays", e.target.value)} placeholder="e.g. 3" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formData.benefitCategory === "SICK_PAY" && (
+              <div className="space-y-4 rounded-md border border-dashed border-amber-200 bg-amber-50/50 p-3">
+                <p className="text-sm font-medium text-amber-800">Sick Pay Details</p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Full Pay Duration (weeks)</Label>
+                    <Input type="number" min={0} step={1} value={formData.sickPayFullPayWeeks} onChange={(e) => updateField("sickPayFullPayWeeks", e.target.value)} placeholder="e.g. 12" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Partial Pay Duration (weeks)</Label>
+                    <Input type="number" min={0} step={1} value={formData.sickPayHalfPayWeeks} onChange={(e) => updateField("sickPayHalfPayWeeks", e.target.value)} placeholder="e.g. 12" />
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Partial Pay Rate (%)</Label>
+                    <Input type="number" min={0} max={100} step={1} value={formData.sickPayPartialPayPercent} onChange={(e) => updateField("sickPayPartialPayPercent", e.target.value)} placeholder="e.g. 50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Waiting Days Before Sick Pay</Label>
+                    <Input type="number" min={0} step={1} value={formData.sickPayWaitingDays} onChange={(e) => updateField("sickPayWaitingDays", e.target.value)} placeholder="e.g. 3" />
+                  </div>
+                  <div className="flex items-center gap-2 pt-6">
+                    <Switch checked={formData.sickPayAboveStatutory as boolean} onCheckedChange={(v) => updateField("sickPayAboveStatutory", v)} />
+                    <Label>Above Statutory Minimum</Label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formData.benefitCategory === "MATERNITY_PAY" && (
+              <div className="space-y-4 rounded-md border border-dashed border-pink-200 bg-pink-50/50 p-3">
+                <p className="text-sm font-medium text-pink-800">Maternity Pay Details</p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Full Pay (weeks)</Label>
+                    <Input type="number" min={0} step={1} value={formData.maternityFullPayWeeks} onChange={(e) => updateField("maternityFullPayWeeks", e.target.value)} placeholder="e.g. 26" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Partial Pay (weeks)</Label>
+                    <Input type="number" min={0} step={1} value={formData.maternityPartialPayWeeks} onChange={(e) => updateField("maternityPartialPayWeeks", e.target.value)} placeholder="e.g. 16" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Partial Pay Rate (%)</Label>
+                    <Input type="number" min={0} max={100} step={1} value={formData.maternityPartialPayPercent} onChange={(e) => updateField("maternityPartialPayPercent", e.target.value)} placeholder="e.g. 50" />
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Total Leave Available (weeks)</Label>
+                    <Input type="number" min={0} step={1} value={formData.maternityTotalLeaveWeeks} onChange={(e) => updateField("maternityTotalLeaveWeeks", e.target.value)} placeholder="e.g. 52" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>KIT Days (Keeping In Touch)</Label>
+                    <Input type="number" min={0} step={1} value={formData.maternityKitDays} onChange={(e) => updateField("maternityKitDays", e.target.value)} placeholder="e.g. 10" />
+                  </div>
+                  <div className="flex items-center gap-2 pt-6">
+                    <Switch checked={formData.maternityAboveStatutory as boolean} onCheckedChange={(v) => updateField("maternityAboveStatutory", v)} />
+                    <Label>Above Statutory Minimum</Label>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={formData.maternityGradualReturn as boolean} onCheckedChange={(v) => updateField("maternityGradualReturn", v)} />
+                  <Label>Phased/Gradual Return Option</Label>
+                </div>
+              </div>
+            )}
+
+            {formData.benefitCategory === "PATERNITY_PAY" && (
+              <div className="space-y-4 rounded-md border border-dashed border-cyan-200 bg-cyan-50/50 p-3">
+                <p className="text-sm font-medium text-cyan-800">Paternity Pay Details</p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Full Pay (weeks)</Label>
+                    <Input type="number" min={0} step={1} value={formData.paternityFullPayWeeks} onChange={(e) => updateField("paternityFullPayWeeks", e.target.value)} placeholder="e.g. 4" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Partial Pay (weeks)</Label>
+                    <Input type="number" min={0} step={1} value={formData.paternityPartialPayWeeks} onChange={(e) => updateField("paternityPartialPayWeeks", e.target.value)} placeholder="e.g. 2" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Partial Pay Rate (%)</Label>
+                    <Input type="number" min={0} max={100} step={1} value={formData.paternityPartialPayPercent} onChange={(e) => updateField("paternityPartialPayPercent", e.target.value)} placeholder="e.g. 50" />
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Total Leave Available (weeks)</Label>
+                    <Input type="number" min={0} step={1} value={formData.paternityTotalLeaveWeeks} onChange={(e) => updateField("paternityTotalLeaveWeeks", e.target.value)} placeholder="e.g. 6" />
+                  </div>
+                  <div className="flex items-center gap-2 pt-6">
+                    <Switch checked={formData.paternityAboveStatutory as boolean} onCheckedChange={(v) => updateField("paternityAboveStatutory", v)} />
+                    <Label>Above Statutory Minimum</Label>
+                  </div>
+                  <div className="flex items-center gap-2 pt-6">
+                    <Switch checked={formData.paternitySharedParentalLeave as boolean} onCheckedChange={(v) => updateField("paternitySharedParentalLeave", v)} />
+                    <Label>Shared Parental Leave Available</Label>
                   </div>
                 </div>
               </div>

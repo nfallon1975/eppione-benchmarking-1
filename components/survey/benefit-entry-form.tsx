@@ -502,6 +502,351 @@ export function BenefitEntryForm({
         </div>
       )}
 
+      {category === "ANNUAL_LEAVE" && (
+        <div className="space-y-4 rounded-md border border-dashed border-emerald-200 bg-emerald-50/50 p-3">
+          <p className="text-sm font-medium text-emerald-800">Annual Leave Details</p>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Standard Entitlement (days/year)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.leaveDaysEntitlement ?? ""}
+                onChange={(e) =>
+                  update("leaveDaysEntitlement", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 25"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Carry-Over Days Allowed</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.leaveCarryOverDays ?? ""}
+                onChange={(e) =>
+                  update("leaveCarryOverDays", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 5"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <Switch
+                checked={benefit.leaveIncludesPublicHolidays ?? false}
+                onCheckedChange={(v) => update("leaveIncludesPublicHolidays", v)}
+              />
+              <Label>Public Holidays Included in Entitlement</Label>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={benefit.leaveIncreasesWithTenure ?? false}
+                onCheckedChange={(v) => update("leaveIncreasesWithTenure", v)}
+              />
+              <Label>Increases with Service</Label>
+            </div>
+            {benefit.leaveIncreasesWithTenure && (
+              <div className="space-y-2">
+                <Label>Max Days (after service increases)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={benefit.leaveMaxDays ?? ""}
+                  onChange={(e) =>
+                    update("leaveMaxDays", e.target.value ? parseInt(e.target.value) : null)
+                  }
+                  placeholder="e.g. 30"
+                />
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={benefit.leaveBuySellDays ?? false}
+                onCheckedChange={(v) => update("leaveBuySellDays", v)}
+              />
+              <Label>Buy/Sell Days Available</Label>
+            </div>
+          </div>
+          <p className="text-xs font-medium text-emerald-700 pt-1">Special Leave Features</p>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={benefit.leaveBirthdayOff ?? false}
+                onCheckedChange={(v) => update("leaveBirthdayOff", v)}
+              />
+              <Label>Birthday Day Off</Label>
+            </div>
+            <div className="space-y-2">
+              <Label>Volunteer/Charity Days (per year)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.leaveVolunteerDays ?? ""}
+                onChange={(e) =>
+                  update("leaveVolunteerDays", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 2"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Christmas/Year-End Closure Days</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.leaveChristmasClosureDays ?? ""}
+                onChange={(e) =>
+                  update("leaveChristmasClosureDays", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 3"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {category === "SICK_PAY" && (
+        <div className="space-y-4 rounded-md border border-dashed border-amber-200 bg-amber-50/50 p-3">
+          <p className="text-sm font-medium text-amber-800">Sick Pay Details</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Full Pay Duration (weeks)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.sickPayFullPayWeeks ?? ""}
+                onChange={(e) =>
+                  update("sickPayFullPayWeeks", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 12"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Partial Pay Duration (weeks)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.sickPayHalfPayWeeks ?? ""}
+                onChange={(e) =>
+                  update("sickPayHalfPayWeeks", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 12"
+              />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Partial Pay Rate (%)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={benefit.sickPayPartialPayPercent ?? ""}
+                onChange={(e) =>
+                  update("sickPayPartialPayPercent", e.target.value ? parseFloat(e.target.value) : null)
+                }
+                placeholder="e.g. 50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Waiting Days Before Sick Pay Starts</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.sickPayWaitingDays ?? ""}
+                onChange={(e) =>
+                  update("sickPayWaitingDays", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 3"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <Switch
+                checked={benefit.sickPayAboveStatutory ?? false}
+                onCheckedChange={(v) => update("sickPayAboveStatutory", v)}
+              />
+              <Label>Above Statutory Minimum</Label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {category === "MATERNITY_PAY" && (
+        <div className="space-y-4 rounded-md border border-dashed border-pink-200 bg-pink-50/50 p-3">
+          <p className="text-sm font-medium text-pink-800">Maternity Pay Details</p>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Full Pay (weeks)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.maternityFullPayWeeks ?? ""}
+                onChange={(e) =>
+                  update("maternityFullPayWeeks", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 26"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Partial Pay (weeks)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.maternityPartialPayWeeks ?? ""}
+                onChange={(e) =>
+                  update("maternityPartialPayWeeks", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 16"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Partial Pay Rate (%)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={benefit.maternityPartialPayPercent ?? ""}
+                onChange={(e) =>
+                  update("maternityPartialPayPercent", e.target.value ? parseFloat(e.target.value) : null)
+                }
+                placeholder="e.g. 50"
+              />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Total Leave Available (weeks)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.maternityTotalLeaveWeeks ?? ""}
+                onChange={(e) =>
+                  update("maternityTotalLeaveWeeks", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 52"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>KIT Days (Keeping In Touch)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.maternityKitDays ?? ""}
+                onChange={(e) =>
+                  update("maternityKitDays", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 10"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <Switch
+                checked={benefit.maternityAboveStatutory ?? false}
+                onCheckedChange={(v) => update("maternityAboveStatutory", v)}
+              />
+              <Label>Above Statutory Minimum</Label>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={benefit.maternityGradualReturn ?? false}
+              onCheckedChange={(v) => update("maternityGradualReturn", v)}
+            />
+            <Label>Phased/Gradual Return Option</Label>
+          </div>
+        </div>
+      )}
+
+      {category === "PATERNITY_PAY" && (
+        <div className="space-y-4 rounded-md border border-dashed border-cyan-200 bg-cyan-50/50 p-3">
+          <p className="text-sm font-medium text-cyan-800">Paternity Pay Details</p>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Full Pay (weeks)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.paternityFullPayWeeks ?? ""}
+                onChange={(e) =>
+                  update("paternityFullPayWeeks", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 4"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Partial Pay (weeks)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.paternityPartialPayWeeks ?? ""}
+                onChange={(e) =>
+                  update("paternityPartialPayWeeks", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 2"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Partial Pay Rate (%)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={benefit.paternityPartialPayPercent ?? ""}
+                onChange={(e) =>
+                  update("paternityPartialPayPercent", e.target.value ? parseFloat(e.target.value) : null)
+                }
+                placeholder="e.g. 50"
+              />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Total Leave Available (weeks)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={benefit.paternityTotalLeaveWeeks ?? ""}
+                onChange={(e) =>
+                  update("paternityTotalLeaveWeeks", e.target.value ? parseInt(e.target.value) : null)
+                }
+                placeholder="e.g. 6"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <Switch
+                checked={benefit.paternityAboveStatutory ?? false}
+                onCheckedChange={(v) => update("paternityAboveStatutory", v)}
+              />
+              <Label>Above Statutory Minimum</Label>
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <Switch
+                checked={benefit.paternitySharedParentalLeave ?? false}
+                onCheckedChange={(v) => update("paternitySharedParentalLeave", v)}
+              />
+              <Label>Shared Parental Leave Available</Label>
+            </div>
+          </div>
+        </div>
+      )}
+
       {category === "PENSION" && (
         <div className="space-y-4 rounded-md border border-dashed border-indigo-200 bg-indigo-50/50 p-3">
           <p className="text-sm font-medium text-indigo-800">Pension Details</p>

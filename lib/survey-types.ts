@@ -78,6 +78,37 @@ export interface BenefitFormData {
   pensionDeathBenefitMultiple: number | null;
   pensionDeathBenefitType: string;
   pensionFormulaType: string;
+  // Annual Leave
+  leaveDaysEntitlement: number | null;
+  leaveIncludesPublicHolidays: boolean | null;
+  leaveIncreasesWithTenure: boolean | null;
+  leaveMaxDays: number | null;
+  leaveBuySellDays: boolean | null;
+  leaveCarryOverDays: number | null;
+  leaveBirthdayOff: boolean | null;
+  leaveVolunteerDays: number | null;
+  leaveChristmasClosureDays: number | null;
+  // Sick Pay
+  sickPayFullPayWeeks: number | null;
+  sickPayHalfPayWeeks: number | null;
+  sickPayPartialPayPercent: number | null;
+  sickPayWaitingDays: number | null;
+  sickPayAboveStatutory: boolean | null;
+  // Maternity Pay
+  maternityFullPayWeeks: number | null;
+  maternityPartialPayWeeks: number | null;
+  maternityPartialPayPercent: number | null;
+  maternityTotalLeaveWeeks: number | null;
+  maternityAboveStatutory: boolean | null;
+  maternityKitDays: number | null;
+  maternityGradualReturn: boolean | null;
+  // Paternity Pay
+  paternityFullPayWeeks: number | null;
+  paternityPartialPayWeeks: number | null;
+  paternityPartialPayPercent: number | null;
+  paternityTotalLeaveWeeks: number | null;
+  paternityAboveStatutory: boolean | null;
+  paternitySharedParentalLeave: boolean | null;
   // Broker
   brokerName: string;
   brokerSatisfactionScore: number | null;
@@ -192,6 +223,33 @@ export function createEmptyBenefit(currency: string = "EUR"): BenefitFormData {
     pensionDeathBenefitMultiple: null,
     pensionDeathBenefitType: "",
     pensionFormulaType: "",
+    leaveDaysEntitlement: null,
+    leaveIncludesPublicHolidays: null,
+    leaveIncreasesWithTenure: null,
+    leaveMaxDays: null,
+    leaveBuySellDays: null,
+    leaveCarryOverDays: null,
+    leaveBirthdayOff: null,
+    leaveVolunteerDays: null,
+    leaveChristmasClosureDays: null,
+    sickPayFullPayWeeks: null,
+    sickPayHalfPayWeeks: null,
+    sickPayPartialPayPercent: null,
+    sickPayWaitingDays: null,
+    sickPayAboveStatutory: null,
+    maternityFullPayWeeks: null,
+    maternityPartialPayWeeks: null,
+    maternityPartialPayPercent: null,
+    maternityTotalLeaveWeeks: null,
+    maternityAboveStatutory: null,
+    maternityKitDays: null,
+    maternityGradualReturn: null,
+    paternityFullPayWeeks: null,
+    paternityPartialPayWeeks: null,
+    paternityPartialPayPercent: null,
+    paternityTotalLeaveWeeks: null,
+    paternityAboveStatutory: null,
+    paternitySharedParentalLeave: null,
     brokerName: "",
     brokerSatisfactionScore: null,
     renewalDate: "",

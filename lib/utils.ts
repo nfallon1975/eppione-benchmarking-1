@@ -74,6 +74,10 @@ export const BENEFIT_CATEGORY_LABELS: Record<string, string> = {
   TRANSPORT: "Transport / Commuter Benefits",
   CHILDCARE: "Childcare Benefits",
   EDUCATION: "Education / Training",
+  ANNUAL_LEAVE: "Annual Leave Entitlement",
+  SICK_PAY: "Sick Pay",
+  MATERNITY_PAY: "Maternity Pay",
+  PATERNITY_PAY: "Paternity Pay",
   OTHER: "Other Benefits",
 };
 

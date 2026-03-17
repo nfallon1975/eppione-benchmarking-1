@@ -55,6 +55,37 @@ export interface CompanyBenefitData {
   pensionDeathBenefitMultiple: number | null;
   pensionDeathBenefitType: string | null;
   pensionFormulaType: string | null;
+  // Annual Leave
+  leaveDaysEntitlement: number | null;
+  leaveIncludesPublicHolidays: boolean | null;
+  leaveIncreasesWithTenure: boolean | null;
+  leaveMaxDays: number | null;
+  leaveBuySellDays: boolean | null;
+  leaveCarryOverDays: number | null;
+  leaveBirthdayOff: boolean | null;
+  leaveVolunteerDays: number | null;
+  leaveChristmasClosureDays: number | null;
+  // Sick Pay
+  sickPayFullPayWeeks: number | null;
+  sickPayHalfPayWeeks: number | null;
+  sickPayPartialPayPercent: number | null;
+  sickPayWaitingDays: number | null;
+  sickPayAboveStatutory: boolean | null;
+  // Maternity Pay
+  maternityFullPayWeeks: number | null;
+  maternityPartialPayWeeks: number | null;
+  maternityPartialPayPercent: number | null;
+  maternityTotalLeaveWeeks: number | null;
+  maternityAboveStatutory: boolean | null;
+  maternityKitDays: number | null;
+  maternityGradualReturn: boolean | null;
+  // Paternity Pay
+  paternityFullPayWeeks: number | null;
+  paternityPartialPayWeeks: number | null;
+  paternityPartialPayPercent: number | null;
+  paternityTotalLeaveWeeks: number | null;
+  paternityAboveStatutory: boolean | null;
+  paternitySharedParentalLeave: boolean | null;
 }
 
 export const SALARY_BAND_LABELS: Record<string, string> = {
@@ -165,6 +196,45 @@ export interface PensionCategoryStats {
   deathBenefitTypeBreakdown: { type: string; count: number; percentage: number }[];
 }
 
+export interface AnnualLeaveCategoryStats {
+  daysEntitlementStats: PercentileStats | null;
+  carryOverDaysStats: PercentileStats | null;
+  maxDaysStats: PercentileStats | null;
+  volunteerDaysStats: PercentileStats | null;
+  christmasClosureDaysStats: PercentileStats | null;
+  pctIncludesPublicHolidays: number;
+  pctIncreasesWithTenure: number;
+  pctBuySellDays: number;
+  pctBirthdayOff: number;
+}
+
+export interface SickPayCategoryStats {
+  fullPayWeeksStats: PercentileStats | null;
+  halfPayWeeksStats: PercentileStats | null;
+  partialPayPercentStats: PercentileStats | null;
+  waitingDaysStats: PercentileStats | null;
+  pctAboveStatutory: number;
+}
+
+export interface MaternityPayCategoryStats {
+  fullPayWeeksStats: PercentileStats | null;
+  partialPayWeeksStats: PercentileStats | null;
+  partialPayPercentStats: PercentileStats | null;
+  totalLeaveWeeksStats: PercentileStats | null;
+  kitDaysStats: PercentileStats | null;
+  pctAboveStatutory: number;
+  pctGradualReturn: number;
+}
+
+export interface PaternityPayCategoryStats {
+  fullPayWeeksStats: PercentileStats | null;
+  partialPayWeeksStats: PercentileStats | null;
+  partialPayPercentStats: PercentileStats | null;
+  totalLeaveWeeksStats: PercentileStats | null;
+  pctAboveStatutory: number;
+  pctSharedParentalLeave: number;
+}
+
 export interface CategoryBenchmark {
   category: string;
   categoryLabel: string;
@@ -179,6 +249,10 @@ export interface CategoryBenchmark {
   ciStats: CiCategoryStats | null;
   dentalStats: DentalCategoryStats | null;
   pensionStats: PensionCategoryStats | null;
+  annualLeaveStats: AnnualLeaveCategoryStats | null;
+  sickPayStats: SickPayCategoryStats | null;
+  maternityPayStats: MaternityPayCategoryStats | null;
+  paternityPayStats: PaternityPayCategoryStats | null;
   pctEmployerFunded: number;
   pctCoversSpouse: number;
   pctCoversDependents: number;
@@ -234,6 +308,37 @@ export interface CompanyPosition {
   pensionDeathBenefitMultiple: number | null;
   pensionDeathBenefitType: string | null;
   pensionFormulaType: string | null;
+  // Annual Leave
+  leaveDaysEntitlement: number | null;
+  leaveIncludesPublicHolidays: boolean | null;
+  leaveIncreasesWithTenure: boolean | null;
+  leaveMaxDays: number | null;
+  leaveBuySellDays: boolean | null;
+  leaveCarryOverDays: number | null;
+  leaveBirthdayOff: boolean | null;
+  leaveVolunteerDays: number | null;
+  leaveChristmasClosureDays: number | null;
+  // Sick Pay
+  sickPayFullPayWeeks: number | null;
+  sickPayHalfPayWeeks: number | null;
+  sickPayPartialPayPercent: number | null;
+  sickPayWaitingDays: number | null;
+  sickPayAboveStatutory: boolean | null;
+  // Maternity Pay
+  maternityFullPayWeeks: number | null;
+  maternityPartialPayWeeks: number | null;
+  maternityPartialPayPercent: number | null;
+  maternityTotalLeaveWeeks: number | null;
+  maternityAboveStatutory: boolean | null;
+  maternityKitDays: number | null;
+  maternityGradualReturn: boolean | null;
+  // Paternity Pay
+  paternityFullPayWeeks: number | null;
+  paternityPartialPayWeeks: number | null;
+  paternityPartialPayPercent: number | null;
+  paternityTotalLeaveWeeks: number | null;
+  paternityAboveStatutory: boolean | null;
+  paternitySharedParentalLeave: boolean | null;
 }
 
 export interface PlatformBenchmark {

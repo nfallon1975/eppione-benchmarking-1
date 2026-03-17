@@ -329,6 +329,33 @@ function benefitEntryToFormData(entry: {
   pensionDeathBenefitMultiple?: number | null;
   pensionDeathBenefitType?: string | null;
   pensionFormulaType?: string | null;
+  leaveDaysEntitlement?: number | null;
+  leaveIncludesPublicHolidays?: boolean | null;
+  leaveIncreasesWithTenure?: boolean | null;
+  leaveMaxDays?: number | null;
+  leaveBuySellDays?: boolean | null;
+  leaveCarryOverDays?: number | null;
+  leaveBirthdayOff?: boolean | null;
+  leaveVolunteerDays?: number | null;
+  leaveChristmasClosureDays?: number | null;
+  sickPayFullPayWeeks?: number | null;
+  sickPayHalfPayWeeks?: number | null;
+  sickPayPartialPayPercent?: number | null;
+  sickPayWaitingDays?: number | null;
+  sickPayAboveStatutory?: boolean | null;
+  maternityFullPayWeeks?: number | null;
+  maternityPartialPayWeeks?: number | null;
+  maternityPartialPayPercent?: number | null;
+  maternityTotalLeaveWeeks?: number | null;
+  maternityAboveStatutory?: boolean | null;
+  maternityKitDays?: number | null;
+  maternityGradualReturn?: boolean | null;
+  paternityFullPayWeeks?: number | null;
+  paternityPartialPayWeeks?: number | null;
+  paternityPartialPayPercent?: number | null;
+  paternityTotalLeaveWeeks?: number | null;
+  paternityAboveStatutory?: boolean | null;
+  paternitySharedParentalLeave?: boolean | null;
   brokerName?: string | null;
   brokerSatisfactionScore?: number | null;
   renewalDate?: Date | null;
@@ -385,6 +412,33 @@ function benefitEntryToFormData(entry: {
     pensionDeathBenefitMultiple: entry.pensionDeathBenefitMultiple ?? null,
     pensionDeathBenefitType: entry.pensionDeathBenefitType || "",
     pensionFormulaType: entry.pensionFormulaType || "",
+    leaveDaysEntitlement: entry.leaveDaysEntitlement ?? null,
+    leaveIncludesPublicHolidays: entry.leaveIncludesPublicHolidays ?? null,
+    leaveIncreasesWithTenure: entry.leaveIncreasesWithTenure ?? null,
+    leaveMaxDays: entry.leaveMaxDays ?? null,
+    leaveBuySellDays: entry.leaveBuySellDays ?? null,
+    leaveCarryOverDays: entry.leaveCarryOverDays ?? null,
+    leaveBirthdayOff: entry.leaveBirthdayOff ?? null,
+    leaveVolunteerDays: entry.leaveVolunteerDays ?? null,
+    leaveChristmasClosureDays: entry.leaveChristmasClosureDays ?? null,
+    sickPayFullPayWeeks: entry.sickPayFullPayWeeks ?? null,
+    sickPayHalfPayWeeks: entry.sickPayHalfPayWeeks ?? null,
+    sickPayPartialPayPercent: entry.sickPayPartialPayPercent ?? null,
+    sickPayWaitingDays: entry.sickPayWaitingDays ?? null,
+    sickPayAboveStatutory: entry.sickPayAboveStatutory ?? null,
+    maternityFullPayWeeks: entry.maternityFullPayWeeks ?? null,
+    maternityPartialPayWeeks: entry.maternityPartialPayWeeks ?? null,
+    maternityPartialPayPercent: entry.maternityPartialPayPercent ?? null,
+    maternityTotalLeaveWeeks: entry.maternityTotalLeaveWeeks ?? null,
+    maternityAboveStatutory: entry.maternityAboveStatutory ?? null,
+    maternityKitDays: entry.maternityKitDays ?? null,
+    maternityGradualReturn: entry.maternityGradualReturn ?? null,
+    paternityFullPayWeeks: entry.paternityFullPayWeeks ?? null,
+    paternityPartialPayWeeks: entry.paternityPartialPayWeeks ?? null,
+    paternityPartialPayPercent: entry.paternityPartialPayPercent ?? null,
+    paternityTotalLeaveWeeks: entry.paternityTotalLeaveWeeks ?? null,
+    paternityAboveStatutory: entry.paternityAboveStatutory ?? null,
+    paternitySharedParentalLeave: entry.paternitySharedParentalLeave ?? null,
     brokerName: entry.brokerName || "",
     brokerSatisfactionScore: entry.brokerSatisfactionScore ?? null,
     renewalDate: entry.renewalDate ? entry.renewalDate.toISOString().split("T")[0] : "",

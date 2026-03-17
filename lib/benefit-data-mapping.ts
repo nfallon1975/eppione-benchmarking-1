@@ -46,6 +46,33 @@ export function prismaEntryToCompanyBenefitData(
     pensionDeathBenefitMultiple: number | null;
     pensionDeathBenefitType: string | null;
     pensionFormulaType: string | null;
+    leaveDaysEntitlement: number | null;
+    leaveIncludesPublicHolidays: boolean | null;
+    leaveIncreasesWithTenure: boolean | null;
+    leaveMaxDays: number | null;
+    leaveBuySellDays: boolean | null;
+    leaveCarryOverDays: number | null;
+    leaveBirthdayOff: boolean | null;
+    leaveVolunteerDays: number | null;
+    leaveChristmasClosureDays: number | null;
+    sickPayFullPayWeeks: number | null;
+    sickPayHalfPayWeeks: number | null;
+    sickPayPartialPayPercent: number | null;
+    sickPayWaitingDays: number | null;
+    sickPayAboveStatutory: boolean | null;
+    maternityFullPayWeeks: number | null;
+    maternityPartialPayWeeks: number | null;
+    maternityPartialPayPercent: number | null;
+    maternityTotalLeaveWeeks: number | null;
+    maternityAboveStatutory: boolean | null;
+    maternityKitDays: number | null;
+    maternityGradualReturn: boolean | null;
+    paternityFullPayWeeks: number | null;
+    paternityPartialPayWeeks: number | null;
+    paternityPartialPayPercent: number | null;
+    paternityTotalLeaveWeeks: number | null;
+    paternityAboveStatutory: boolean | null;
+    paternitySharedParentalLeave: boolean | null;
     company?: { country: string };
   },
   fallbackCountry?: string
@@ -96,5 +123,32 @@ export function prismaEntryToCompanyBenefitData(
     pensionDeathBenefitMultiple: e.pensionDeathBenefitMultiple,
     pensionDeathBenefitType: e.pensionDeathBenefitType,
     pensionFormulaType: e.pensionFormulaType,
+    leaveDaysEntitlement: e.leaveDaysEntitlement,
+    leaveIncludesPublicHolidays: e.leaveIncludesPublicHolidays,
+    leaveIncreasesWithTenure: e.leaveIncreasesWithTenure,
+    leaveMaxDays: e.leaveMaxDays,
+    leaveBuySellDays: e.leaveBuySellDays,
+    leaveCarryOverDays: e.leaveCarryOverDays,
+    leaveBirthdayOff: e.leaveBirthdayOff,
+    leaveVolunteerDays: e.leaveVolunteerDays,
+    leaveChristmasClosureDays: e.leaveChristmasClosureDays,
+    sickPayFullPayWeeks: e.sickPayFullPayWeeks,
+    sickPayHalfPayWeeks: e.sickPayHalfPayWeeks,
+    sickPayPartialPayPercent: e.sickPayPartialPayPercent,
+    sickPayWaitingDays: e.sickPayWaitingDays,
+    sickPayAboveStatutory: e.sickPayAboveStatutory,
+    maternityFullPayWeeks: e.maternityFullPayWeeks,
+    maternityPartialPayWeeks: e.maternityPartialPayWeeks,
+    maternityPartialPayPercent: e.maternityPartialPayPercent,
+    maternityTotalLeaveWeeks: e.maternityTotalLeaveWeeks,
+    maternityAboveStatutory: e.maternityAboveStatutory,
+    maternityKitDays: e.maternityKitDays,
+    maternityGradualReturn: e.maternityGradualReturn,
+    paternityFullPayWeeks: e.paternityFullPayWeeks,
+    paternityPartialPayWeeks: e.paternityPartialPayWeeks,
+    paternityPartialPayPercent: e.paternityPartialPayPercent,
+    paternityTotalLeaveWeeks: e.paternityTotalLeaveWeeks,
+    paternityAboveStatutory: e.paternityAboveStatutory,
+    paternitySharedParentalLeave: e.paternitySharedParentalLeave,
   };
 }
