@@ -22,7 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ConfidenceBadge } from "./confidence-badge";
-import { TARGET_FIELDS } from "@/lib/ai-column-mapper";
+import { TARGET_FIELDS } from "@/lib/import-target-fields";
 import { Info } from "lucide-react";
 
 interface ColumnMappingData {
