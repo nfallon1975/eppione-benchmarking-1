@@ -152,12 +152,12 @@ export default function AdminImportPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Assign to Broker</Label>
-              <Select value={selectedBrokerId} onValueChange={setSelectedBrokerId}>
+              <Select value={selectedBrokerId || "none"} onValueChange={(v) => setSelectedBrokerId(v === "none" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="No broker (admin only)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No broker assigned</SelectItem>
+                  <SelectItem value="none">No broker assigned</SelectItem>
                   {brokers.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.name || b.email}
