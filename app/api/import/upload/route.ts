@@ -12,14 +12,6 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = [
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // xlsx
-  "application/vnd.ms-excel", // xls
-  "text/csv",
-  "text/tab-separated-values",
-  "application/octet-stream", // fallback
-];
-
 function getFileType(filename: string): string | null {
   const ext = filename.split(".").pop()?.toLowerCase();
   if (ext === "xlsx" || ext === "xls") return ext;
