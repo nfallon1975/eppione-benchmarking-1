@@ -22,6 +22,7 @@ import {
   BookOpen,
   Search,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -50,11 +51,13 @@ const adminNavItems = [
   { href: "/admin/baseline/import-pdf", label: "PDF Import", icon: FileCheck },
   { href: "/data-explorer", label: "Data Explorer", icon: Search },
   { href: "/admin/upload", label: "Bulk Upload", icon: Upload },
+  { href: "/admin/import", label: "Smart Import", icon: Sparkles },
 ];
 
 const brokerNavItems = [
   { href: "/broker/dashboard", label: "Broker Overview", icon: LayoutDashboard },
   { href: "/broker/clients", label: "My Clients", icon: Users },
+  { href: "/broker/import", label: "Smart Import", icon: Sparkles },
   { href: "/broker/upload", label: "Upload Clients", icon: Upload },
   { href: "/broker/submissions", label: "Submissions", icon: ClipboardList },
   { href: "/broker/compliance", label: "Compliance Data", icon: FileCheck },

@@ -135,6 +135,24 @@ enum PensionFormulaType {
   OTHER
 }
 
+enum ImportStatus {
+  UPLOADED
+  PARSED
+  MAPPING
+  REVIEW
+  APPROVED
+  IMPORTING
+  COMPLETED
+  FAILED
+}
+
+enum ColumnMappingStatus {
+  AI_MAPPED
+  USER_CONFIRMED
+  USER_OVERRIDDEN
+  UNMAPPED
+}
+
 model User {
   id             String       @id @default(cuid())
   email          String       @unique
@@ -163,6 +181,10 @@ model User {
   dataPointChanges        DataPointHistory[]    @relation("HistoryChanger")
   notifications           Notification[]
   pdfIngestions           PDFIngestion[]    @relation("PDFUploader")
+  brokerImports           BrokerImport[]    @relation("BrokerImporter")
+  adminImports            BrokerImport[]    @relation("AdminImporter")
+  assignedImports         BrokerImport[]    @relation("AssignedBrokerImports")
+  mappingTemplates        BrokerMappingTemplate[]
   createdAt               DateTime   @default(now())
   updatedAt               DateTime   @updatedAt
 
@@ -1012,4 +1034,102 @@ model BaselineBenchmark {
   @@index([sourceId])
   @@index([country, benefitCategory])
   @@index([country, benefitCategory, metricType])
+}
+
+// ── AI-Powered Spreadsheet Import ──
+
+model BrokerImport {
+  id                    String        @id @default(cuid())
+  filename              String
+  fileHash              String        // SHA-256 for duplicate detection
+  filePath              String?       // stored file path
+  fileType              String        // xlsx, csv, tsv
+  sheetName             String?       // which sheet if multi-sheet xlsx
+  uploadedByBrokerId    String?       // broker who uploaded (nullable for admin uploads)
+  uploadedByBroker      User?         @relation("BrokerImporter", fields: [uploadedByBrokerId], references: [id])
+  uploadedByAdminId     String?       // admin who uploaded on behalf
+  uploadedByAdmin       User?         @relation("AdminImporter", fields: [uploadedByAdminId], references: [id])
+  assignedBrokerId      String?       // broker who owns these clients
+  assignedBroker        User?         @relation("AssignedBrokerImports", fields: [assignedBrokerId], references: [id])
+  status                ImportStatus  @default(UPLOADED)
+  headerRow             Int           @default(0)
+  totalRows             Int           @default(0)
+  validRows             Int           @default(0)
+  errorRows             Int           @default(0)
+  rawHeaders            String[]
+  sampleData            Json?         // first 5 rows for AI context
+  templateId            String?       // matched BrokerMappingTemplate
+  template              BrokerMappingTemplate? @relation(fields: [templateId], references: [id])
+  anonymise             Boolean       @default(true)
+  companiesCreated      Int           @default(0)
+  companiesUpdated      Int           @default(0)
+  entriesCreated        Int           @default(0)
+  errorLog              Json?
+  columnMappings        ColumnMapping[]
+  importedRows          ImportedRow[]
+  completedAt           DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([uploadedByBrokerId])
+  @@index([uploadedByAdminId])
+  @@index([assignedBrokerId])
+  @@index([status])
+  @@index([fileHash])
+}
+
+model ColumnMapping {
+  id                    String              @id @default(cuid())
+  importId              String
+  import                BrokerImport        @relation(fields: [importId], references: [id], onDelete: Cascade)
+  sourceColumn          String              // original column header
+  sourceColumnIndex     Int
+  targetField           String?             // platform field name (null if unmapped)
+  targetFieldLabel      String?             // human-readable label
+  targetBenefitCategory BenefitCategory?    // if mapping to a benefit-specific field
+  confidence            Float               @default(0)
+  status                ColumnMappingStatus @default(AI_MAPPED)
+  sampleValues          String[]            // first 5 values
+  detectedType          String              @default("string") // number, boolean, string, date, currency
+  transformRule         String?             // e.g. "multiply_by_100", "map_yes_no", "parse_currency"
+  aiReasoning           String?             @db.Text
+
+  @@index([importId])
+  @@unique([importId, sourceColumnIndex])
+}
+
+model ImportedRow {
+  id                    String        @id @default(cuid())
+  importId              String
+  import                BrokerImport  @relation(fields: [importId], references: [id], onDelete: Cascade)
+  rowIndex              Int
+  rawData               Json          // original row data
+  transformedData       Json?         // after mapping applied
+  valid                 Boolean       @default(true)
+  errors                Json?         // validation error messages
+  companyName           String?       // original company name (before anonymisation)
+  anonymisedCode        String?       // generated code like CLIENT-001
+  companyId             String?       // linked Company record after import
+  benefitEntryIds       String[]      // linked BenefitEntry IDs after import
+  createdAt             DateTime      @default(now())
+
+  @@index([importId])
+  @@index([importId, rowIndex])
+}
+
+model BrokerMappingTemplate {
+  id                    String        @id @default(cuid())
+  brokerId              String
+  broker                User          @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  name                  String        // e.g. "Mercer Standard Export"
+  headerHash            String        // hash of sorted column headers for auto-matching
+  mappings              Json          // array of saved column mappings
+  usageCount            Int           @default(0)
+  lastUsedAt            DateTime?
+  imports               BrokerImport[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@unique([brokerId, headerHash])
+  @@index([brokerId])
 }
