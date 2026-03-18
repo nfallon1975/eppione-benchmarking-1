@@ -84,8 +84,11 @@ export async function PATCH(
     if (body.status === "APPROVED" && brokerImport.status === "REVIEW") {
       updates.status = "APPROVED";
     }
+    if (body.status === "REJECTED" && brokerImport.status === "REVIEW") {
+      updates.status = "REJECTED";
+    }
     if (body.status === "CANCELLED") {
-      updates.status = "CANCELLED" as never; // We'll allow cancellation
+      updates.status = "CANCELLED" as never;
     }
     if (body.sheetName) {
       updates.sheetName = body.sheetName;

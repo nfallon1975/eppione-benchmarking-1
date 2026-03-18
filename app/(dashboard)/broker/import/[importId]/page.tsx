@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Loader2, Save, Play, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Loader2, Save, Play, ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
 import { ImportStatusBadge } from "@/components/import/import-status-badge";
 import { SpreadsheetPreview } from "@/components/import/spreadsheet-preview";
 import { MappingTable } from "@/components/import/mapping-table";
@@ -174,6 +174,26 @@ export default function ImportReviewPage() {
     }
   }
 
+  async function rejectImport() {
+    if (!confirm("Are you sure you want to reject this import? The data will not be imported.")) return;
+    setError("");
+    try {
+      const res = await fetch(`/api/import/${importId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "REJECTED" }),
+      });
+      if (res.ok) {
+        fetchImport();
+      } else {
+        const d = await res.json();
+        setError(d.error || "Failed to reject import");
+      }
+    } catch {
+      setError("Network error");
+    }
+  }
+
   async function saveAsTemplate() {
     try {
       const res = await fetch(`/api/import/${importId}/template`, {
@@ -208,6 +228,7 @@ export default function ImportReviewPage() {
   const hasCompanyField = localMappings.some((m) => m.targetField === "companyName");
   const isReviewable = data.status === "REVIEW";
   const isCompleted = data.status === "COMPLETED";
+  const isRejected = data.status === "REJECTED";
 
   // Build mapped columns lookup for preview highlighting
   const mappedColumns: Record<string, string> = {};
@@ -246,6 +267,14 @@ export default function ImportReviewPage() {
               </Button>
             )}
             <Button
+              variant="destructive"
+              size="sm"
+              onClick={rejectImport}
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Reject
+            </Button>
+            <Button
               size="sm"
               onClick={approveAndExecute}
               disabled={executing || !hasCompanyField}
@@ -273,6 +302,18 @@ export default function ImportReviewPage() {
               <p className="text-sm text-green-600">
                 {data.companiesCreated} companies created, {data.entriesCreated} benefit entries imported.
               </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isRejected && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex items-center gap-3 py-4">
+            <XCircle className="h-5 w-5 text-red-600" />
+            <div>
+              <p className="font-medium text-red-800">Import Rejected</p>
+              <p className="text-sm text-red-600">This import was rejected and no data was imported.</p>
             </div>
           </CardContent>
         </Card>

@@ -8,6 +8,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   MAPPING: { label: "AI Mapping...", variant: "default" },
   REVIEW: { label: "Awaiting Review", variant: "default" },
   APPROVED: { label: "Approved", variant: "success" },
+  REJECTED: { label: "Rejected", variant: "destructive" },
   IMPORTING: { label: "Importing...", variant: "default" },
   COMPLETED: { label: "Completed", variant: "success" },
   FAILED: { label: "Failed", variant: "destructive" },
