@@ -73,6 +73,61 @@ export function prismaEntryToCompanyBenefitData(
     paternityTotalLeaveWeeks: number | null;
     paternityAboveStatutory: boolean | null;
     paternitySharedParentalLeave: boolean | null;
+    // Plan Design
+    deductibleAmount: number | null;
+    deductibleCurrency: string | null;
+    coPayPercent: number | null;
+    coPayMaxAmount: number | null;
+    sumInsured: number | null;
+    sumInsuredCurrency: string | null;
+    coverMultiple: number | null;
+    coverMultipleBase: string | null;
+    roomCategory: string | null;
+    waitingPeriodDays: number | null;
+    benefitMaxAnnual: number | null;
+    benefitMaxCurrency: string | null;
+    reimbursementPercent: number | null;
+    benefitDurationDays: number | null;
+    eliminationPeriodDays: number | null;
+    // Coverage Scope
+    insuredLives: number | null;
+    dependentCoverageType: string | null;
+    maxDependentsPerEmployee: number | null;
+    coverageScope: string | null;
+    networkType: string | null;
+    hospitalLevel: string | null;
+    // Regulatory & Tax
+    mandatoryClassification: string | null;
+    taxTreatment: string | null;
+    taxRatePercent: number | null;
+    employeeEligibility: string | null;
+    eligibilityNotes: string | null;
+    // Carrier & Broker Detail
+    carrierTerminationNoticeDays: number | null;
+    brokerCommissionPercent: number | null;
+    brokerFee: number | null;
+    brokerFeeCurrency: string | null;
+    // Multinational Pooling
+    inMultinationalPool: boolean;
+    poolProviderName: string | null;
+    // Bundling / Riders
+    isRider: boolean;
+    parentBenefitEntryId: string | null;
+    riderDescription: string | null;
+    // Maternity Specific
+    maternityNormalDelivery: number | null;
+    maternityCSection: number | null;
+    maternityCurrency: string | null;
+    // Dental Specific
+    dentalAnnualMax: number | null;
+    dentalPreventiveCoverage: boolean | null;
+    dentalMajorCoverage: boolean | null;
+    // Vision Specific
+    visionAnnualMax: number | null;
+    visionExamCovered: boolean | null;
+    // Policy Metadata
+    policyContractLength: number | null;
+    lastRenewalOutcome: string | null;
     company?: { country: string };
   },
   fallbackCountry?: string
@@ -150,5 +205,60 @@ export function prismaEntryToCompanyBenefitData(
     paternityTotalLeaveWeeks: e.paternityTotalLeaveWeeks,
     paternityAboveStatutory: e.paternityAboveStatutory,
     paternitySharedParentalLeave: e.paternitySharedParentalLeave,
+    // Plan Design
+    deductibleAmount: e.deductibleAmount,
+    deductibleCurrency: e.deductibleCurrency,
+    coPayPercent: e.coPayPercent,
+    coPayMaxAmount: e.coPayMaxAmount,
+    sumInsured: e.sumInsured,
+    sumInsuredCurrency: e.sumInsuredCurrency,
+    coverMultiple: e.coverMultiple,
+    coverMultipleBase: e.coverMultipleBase,
+    roomCategory: e.roomCategory,
+    waitingPeriodDays: e.waitingPeriodDays,
+    benefitMaxAnnual: e.benefitMaxAnnual,
+    benefitMaxCurrency: e.benefitMaxCurrency,
+    reimbursementPercent: e.reimbursementPercent,
+    benefitDurationDays: e.benefitDurationDays,
+    eliminationPeriodDays: e.eliminationPeriodDays,
+    // Coverage Scope
+    insuredLives: e.insuredLives,
+    dependentCoverageType: e.dependentCoverageType,
+    maxDependentsPerEmployee: e.maxDependentsPerEmployee,
+    coverageScope: e.coverageScope,
+    networkType: e.networkType,
+    hospitalLevel: e.hospitalLevel,
+    // Regulatory & Tax
+    mandatoryClassification: e.mandatoryClassification,
+    taxTreatment: e.taxTreatment,
+    taxRatePercent: e.taxRatePercent,
+    employeeEligibility: e.employeeEligibility,
+    eligibilityNotes: e.eligibilityNotes,
+    // Carrier & Broker Detail
+    carrierTerminationNoticeDays: e.carrierTerminationNoticeDays,
+    brokerCommissionPercent: e.brokerCommissionPercent,
+    brokerFee: e.brokerFee,
+    brokerFeeCurrency: e.brokerFeeCurrency,
+    // Multinational Pooling
+    inMultinationalPool: e.inMultinationalPool,
+    poolProviderName: e.poolProviderName,
+    // Bundling / Riders
+    isRider: e.isRider,
+    parentBenefitEntryId: e.parentBenefitEntryId,
+    riderDescription: e.riderDescription,
+    // Maternity Specific
+    maternityNormalDelivery: e.maternityNormalDelivery,
+    maternityCSection: e.maternityCSection,
+    maternityCurrency: e.maternityCurrency,
+    // Dental Specific
+    dentalAnnualMax: e.dentalAnnualMax,
+    dentalPreventiveCoverage: e.dentalPreventiveCoverage,
+    dentalMajorCoverage: e.dentalMajorCoverage,
+    // Vision Specific
+    visionAnnualMax: e.visionAnnualMax,
+    visionExamCovered: e.visionExamCovered,
+    // Policy Metadata
+    policyContractLength: e.policyContractLength,
+    lastRenewalOutcome: e.lastRenewalOutcome,
   };
 }

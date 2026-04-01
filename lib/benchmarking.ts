@@ -21,6 +21,15 @@ import {
   type SickPayCategoryStats,
   type MaternityPayCategoryStats,
   type PaternityPayCategoryStats,
+  type DistributionEntry,
+  type PlanDesignCategoryStats,
+  type GenerosityIndex,
+  type MaternitySpecificStats,
+  type DentalSpecificStats,
+  type VisionCategoryStats,
+  type BrokerCarrierStats,
+  type PolicyMetadataStats,
+  type RegulatoryStats,
   SALARY_BAND_LABELS,
 } from "./benchmarking-types";
 import { type CurrencyRateMap, convertCurrency } from "./currency";
@@ -67,6 +76,132 @@ export function calculatePercentileStats(values: number[]): PercentileStats | nu
     max: sorted[n - 1],
     count: n,
   };
+}
+
+/**
+ * Calculate distribution breakdown for a categorical field.
+ */
+function calculateBreakdown<T>(
+  entries: T[],
+  extractor: (e: T) => string | null | undefined
+): DistributionEntry[] {
+  const counts = new Map<string, number>();
+  let total = 0;
+  for (const e of entries) {
+    const val = extractor(e);
+    if (val) {
+      counts.set(val, (counts.get(val) || 0) + 1);
+      total++;
+    }
+  }
+  return Array.from(counts.entries())
+    .map(([type, count]) => ({
+      type,
+      count,
+      percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Collect non-null numeric values from entries.
+ */
+function collectNumeric<T>(
+  entries: T[],
+  extractor: (e: T) => number | null | undefined
+): number[] {
+  const result: number[] = [];
+  for (const e of entries) {
+    const v = extractor(e);
+    if (v !== null && v !== undefined) result.push(v);
+  }
+  return result;
+}
+
+/**
+ * Collect non-null monetary values, converting to target currency.
+ */
+function collectMonetary<T>(
+  entries: T[],
+  amountExtractor: (e: T) => number | null | undefined,
+  currencyExtractor: (e: T) => string | null | undefined,
+  targetCurrency: string,
+  rates: CurrencyRateMap
+): number[] {
+  const result: number[] = [];
+  for (const e of entries) {
+    const amount = amountExtractor(e);
+    const currency = currencyExtractor(e);
+    if (amount !== null && amount !== undefined) {
+      result.push(convertCurrency(amount, currency || "EUR", targetCurrency, rates));
+    }
+  }
+  return result;
+}
+
+/**
+ * Calculate a generosity score (0-100) for a single benefit entry.
+ * Higher = more generous. Weights vary by category.
+ */
+function calculateGenerosityScore(
+  entry: CompanyBenefitData,
+  avgSalary: number | null
+): number | null {
+  const scores: { value: number; weight: number }[] = [];
+  const salary = avgSalary && avgSalary > 0 ? avgSalary : null;
+  const cat = entry.benefitCategory;
+  const isHealth = cat === "HEALTH";
+  const isLife = cat === "LIFE";
+  const isIP = cat === "INCOME_PROTECTION";
+
+  // Sum insured relative to salary (higher = better)
+  if (entry.sumInsured !== null && salary) {
+    const ratio = Math.min(entry.sumInsured / salary, 20); // cap at 20x
+    scores.push({ value: Math.min((ratio / 10) * 100, 100), weight: isHealth ? 3 : 2 });
+  }
+
+  // Cover multiple (higher = better)
+  if (entry.coverMultiple !== null) {
+    scores.push({ value: Math.min((entry.coverMultiple / 6) * 100, 100), weight: isLife ? 4 : 2 });
+  }
+
+  // Deductible relative to salary (lower = better)
+  if (entry.deductibleAmount !== null && salary) {
+    const ratio = entry.deductibleAmount / salary;
+    scores.push({ value: Math.max(0, (1 - ratio * 20) * 100), weight: isHealth ? 3 : 1 });
+  }
+
+  // Co-pay (lower = better)
+  if (entry.coPayPercent !== null) {
+    scores.push({ value: Math.max(0, 100 - entry.coPayPercent), weight: isHealth ? 3 : 1 });
+  }
+
+  // Reimbursement (higher = better)
+  if (entry.reimbursementPercent !== null) {
+    scores.push({ value: entry.reimbursementPercent, weight: isHealth ? 2 : 1 });
+  }
+
+  // Dependent coverage (Family > Spouse > None)
+  if (entry.dependentCoverageType) {
+    const depScores: Record<string, number> = { NONE: 0, CHILDREN_ONLY: 40, SPOUSE_ONLY: 60, FAMILY: 100 };
+    scores.push({ value: depScores[entry.dependentCoverageType] ?? 50, weight: 2 });
+  }
+
+  // Coverage scope (Worldwide > Regional > National > Local)
+  if (entry.coverageScope) {
+    const scopeScores: Record<string, number> = { LOCAL: 25, NATIONAL: 50, REGIONAL: 75, WORLDWIDE: 100 };
+    scores.push({ value: scopeScores[entry.coverageScope] ?? 50, weight: 1 });
+  }
+
+  // IP benefit percentage
+  if (isIP && entry.ipBenefitPercent !== null) {
+    scores.push({ value: Math.min(entry.ipBenefitPercent, 100), weight: 4 });
+  }
+
+  if (scores.length === 0) return null;
+  const totalWeight = scores.reduce((s, x) => s + x.weight, 0);
+  const weightedSum = scores.reduce((s, x) => s + x.value * x.weight, 0);
+  return Math.round(weightedSum / totalWeight);
 }
 
 /**
@@ -528,6 +663,165 @@ export function calculateCategoryBenchmarks(
       if (!paternityPayStats.fullPayWeeksStats && !paternityPayStats.partialPayWeeksStats) paternityPayStats = null;
     }
 
+    // ─── Plan Design Stats (all categories) ───
+    const PLAN_DESIGN_CATEGORIES = ["HEALTH", "LIFE", "INCOME_PROTECTION", "CRITICAL_ILLNESS", "DENTAL", "PENSION"];
+    let planDesignStats: PlanDesignCategoryStats | null = null;
+    let generosityIndex: GenerosityIndex | null = null;
+    let maternitySpecificStats: MaternitySpecificStats | null = null;
+    let dentalSpecificStats: DentalSpecificStats | null = null;
+    let visionStats: VisionCategoryStats | null = null;
+    let brokerCarrierStats: BrokerCarrierStats | null = null;
+    let policyMetadataStats: PolicyMetadataStats | null = null;
+    let regulatoryStats: RegulatoryStats | null = null;
+
+    if (meetsMinimum && PLAN_DESIGN_CATEGORIES.includes(category)) {
+      const deductibles = collectMonetary(entries, e => e.deductibleAmount, e => e.deductibleCurrency, targetCurrency, rates);
+      const sumInsureds = collectMonetary(entries, e => e.sumInsured, e => e.sumInsuredCurrency, targetCurrency, rates);
+      const benefitMaxes = collectMonetary(entries, e => e.benefitMaxAnnual, e => e.benefitMaxCurrency, targetCurrency, rates);
+
+      planDesignStats = {
+        deductibleStats: calculatePercentileStats(deductibles),
+        coPayPercentStats: calculatePercentileStats(collectNumeric(entries, e => e.coPayPercent)),
+        coPayMaxStats: calculatePercentileStats(collectNumeric(entries, e => e.coPayMaxAmount)),
+        sumInsuredStats: calculatePercentileStats(sumInsureds),
+        coverMultipleStats: calculatePercentileStats(collectNumeric(entries, e => e.coverMultiple)),
+        reimbursementPercentStats: calculatePercentileStats(collectNumeric(entries, e => e.reimbursementPercent)),
+        benefitMaxAnnualStats: calculatePercentileStats(benefitMaxes),
+        waitingPeriodDaysStats: calculatePercentileStats(collectNumeric(entries, e => e.waitingPeriodDays)),
+        benefitDurationDaysStats: calculatePercentileStats(collectNumeric(entries, e => e.benefitDurationDays)),
+        eliminationPeriodDaysStats: calculatePercentileStats(collectNumeric(entries, e => e.eliminationPeriodDays)),
+        insuredLivesStats: calculatePercentileStats(collectNumeric(entries, e => e.insuredLives)),
+        roomCategoryBreakdown: calculateBreakdown(entries, e => e.roomCategory),
+        coverMultipleBaseBreakdown: calculateBreakdown(entries, e => e.coverMultipleBase),
+        networkTypeBreakdown: calculateBreakdown(entries, e => e.networkType),
+        coverageScopeBreakdown: calculateBreakdown(entries, e => e.coverageScope),
+        hospitalLevelBreakdown: calculateBreakdown(entries, e => e.hospitalLevel),
+        dependentCoverageTypeBreakdown: calculateBreakdown(entries, e => e.dependentCoverageType),
+        detailedCompanyCount: new Set(
+          entries.filter(e => e.deductibleAmount !== null || e.sumInsured !== null || e.coverMultiple !== null || e.reimbursementPercent !== null).map(e => e.companyId)
+        ).size,
+      };
+
+      // Check if any sub-stat has data
+      const hasData = planDesignStats.deductibleStats || planDesignStats.coPayPercentStats ||
+        planDesignStats.sumInsuredStats || planDesignStats.coverMultipleStats ||
+        planDesignStats.reimbursementPercentStats || planDesignStats.benefitMaxAnnualStats ||
+        planDesignStats.roomCategoryBreakdown.length > 0 || planDesignStats.networkTypeBreakdown.length > 0 ||
+        planDesignStats.coverageScopeBreakdown.length > 0 || planDesignStats.dependentCoverageTypeBreakdown.length > 0;
+      if (!hasData) planDesignStats = null;
+    }
+
+    // Generosity Index
+    if (meetsMinimum && PLAN_DESIGN_CATEGORIES.includes(category)) {
+      // We need average salary from the company data - approximate from all entries
+      const allScores: number[] = [];
+      for (const e of entries) {
+        const score = calculateGenerosityScore(e, null); // salary not available at this level
+        if (score !== null) allScores.push(score);
+      }
+      if (allScores.length >= ANONYMITY_MINIMUM) {
+        generosityIndex = {
+          scores: allScores,
+          stats: calculatePercentileStats(allScores),
+        };
+      }
+    }
+
+    // Maternity-specific stats (for HEALTH category)
+    if (category === "HEALTH" && meetsMinimum) {
+      const normalDelivery = collectMonetary(entries, e => e.maternityNormalDelivery, e => e.maternityCurrency, targetCurrency, rates);
+      const cSection = collectMonetary(entries, e => e.maternityCSection, e => e.maternityCurrency, targetCurrency, rates);
+      const nds = calculatePercentileStats(normalDelivery);
+      const css = calculatePercentileStats(cSection);
+      if (nds || css) {
+        maternitySpecificStats = { normalDeliveryStats: nds, cSectionStats: css };
+      }
+    }
+
+    // Dental-specific stats
+    if (category === "DENTAL" && meetsMinimum) {
+      const annualMaxes = collectMonetary(entries, e => e.dentalAnnualMax, e => e.costCurrency, targetCurrency, rates);
+      const totalDental = entries.length;
+      const preventiveCount = entries.filter(e => e.dentalPreventiveCoverage === true).length;
+      const majorCount = entries.filter(e => e.dentalMajorCoverage === true).length;
+      const dams = calculatePercentileStats(annualMaxes);
+      if (dams || preventiveCount > 0 || majorCount > 0) {
+        dentalSpecificStats = {
+          dentalAnnualMaxStats: dams,
+          pctPreventiveCoverage: totalDental > 0 ? Math.round((preventiveCount / totalDental) * 100) : 0,
+          pctMajorCoverage: totalDental > 0 ? Math.round((majorCount / totalDental) * 100) : 0,
+        };
+      }
+    }
+
+    // Vision stats
+    if (category === "VISION" && meetsMinimum) {
+      const annualMaxes = collectMonetary(entries, e => e.visionAnnualMax, e => e.costCurrency, targetCurrency, rates);
+      const totalVision = entries.length;
+      const examCount = entries.filter(e => e.visionExamCovered === true).length;
+      const vams = calculatePercentileStats(annualMaxes);
+      if (vams || examCount > 0) {
+        visionStats = {
+          annualMaxStats: vams,
+          pctExamCovered: totalVision > 0 ? Math.round((examCount / totalVision) * 100) : 0,
+        };
+      }
+    }
+
+    // Broker & Carrier stats (all categories)
+    if (meetsMinimum) {
+      const commissions = collectNumeric(entries, e => e.brokerCommissionPercent);
+      const fees = collectMonetary(entries, e => e.brokerFee, e => e.brokerFeeCurrency, targetCurrency, rates);
+      const noticeDays = collectNumeric(entries, e => e.carrierTerminationNoticeDays);
+      const totalForPool = entries.length;
+      const poolCount = entries.filter(e => e.inMultinationalPool).length;
+      const poolBreakdown = calculateBreakdown(entries.filter(e => e.inMultinationalPool), e => e.poolProviderName);
+      const carrierBd: DistributionEntry[] = []; // carrier data requires provider field not on CompanyBenefitData
+
+      const bcs = calculatePercentileStats(commissions);
+      const bfs = calculatePercentileStats(fees);
+      const tnds = calculatePercentileStats(noticeDays);
+      if (bcs || bfs || tnds || poolCount > 0) {
+        brokerCarrierStats = {
+          brokerCommissionStats: bcs,
+          brokerFeeStats: bfs,
+          terminationNoticeDaysStats: tnds,
+          pctInMultinationalPool: totalForPool > 0 ? Math.round((poolCount / totalForPool) * 100) : 0,
+          poolProviderBreakdown: poolBreakdown,
+          carrierBreakdown: carrierBd.slice(0, 10), // top 10 carriers
+        };
+      }
+    }
+
+    // Policy Metadata stats (all categories)
+    if (meetsMinimum) {
+      const contractLengths = collectNumeric(entries, e => e.policyContractLength);
+      const renewalOutcomes = calculateBreakdown(entries, e => e.lastRenewalOutcome);
+      const cls = calculatePercentileStats(contractLengths);
+      if (cls || renewalOutcomes.length > 0) {
+        policyMetadataStats = {
+          contractLengthStats: cls,
+          lastRenewalOutcomeBreakdown: renewalOutcomes,
+        };
+      }
+    }
+
+    // Regulatory stats (all categories)
+    if (meetsMinimum) {
+      const mandatoryBd = calculateBreakdown(entries, e => e.mandatoryClassification);
+      const taxBd = calculateBreakdown(entries, e => e.taxTreatment);
+      const eligibilityBd = calculateBreakdown(entries, e => e.employeeEligibility);
+      const riderCount = entries.filter(e => e.isRider).length;
+      if (mandatoryBd.length > 0 || taxBd.length > 0 || eligibilityBd.length > 0 || riderCount > 0) {
+        regulatoryStats = {
+          mandatoryClassificationBreakdown: mandatoryBd,
+          taxTreatmentBreakdown: taxBd,
+          employeeEligibilityBreakdown: eligibilityBd,
+          pctRiders: entries.length > 0 ? Math.round((riderCount / entries.length) * 100) : 0,
+        };
+      }
+    }
+
     const totalEntries = entries.length;
     results.push({
       category,
@@ -565,6 +859,14 @@ export function calculateCategoryBenchmarks(
       pctFlexible: totalEntries > 0
         ? Math.round((entries.filter((e) => e.isFlexible).length / totalEntries) * 100)
         : 0,
+      planDesignStats,
+      generosityIndex,
+      maternitySpecificStats,
+      dentalSpecificStats,
+      visionStats,
+      brokerCarrierStats,
+      policyMetadataStats,
+      regulatoryStats,
     });
   }
 
@@ -949,6 +1251,9 @@ export function calculateCompanyPosition(
       paternitySharedParentalLeave = e.paternitySharedParentalLeave;
     }
 
+    // Cross-category fields from first entry
+    const first = myEntries.length > 0 ? myEntries[0] : null;
+
     return {
       category: bm.category,
       yourCost: totalCost,
@@ -1013,6 +1318,63 @@ export function calculateCompanyPosition(
       paternityTotalLeaveWeeks,
       paternityAboveStatutory,
       paternitySharedParentalLeave,
+      // Plan Design
+      deductibleAmount: first?.deductibleAmount ?? null,
+      deductibleCurrency: first?.deductibleCurrency ?? null,
+      coPayPercent: first?.coPayPercent ?? null,
+      coPayMaxAmount: first?.coPayMaxAmount ?? null,
+      sumInsured: first?.sumInsured ?? null,
+      sumInsuredCurrency: first?.sumInsuredCurrency ?? null,
+      coverMultiple: first?.coverMultiple ?? null,
+      coverMultipleBase: first?.coverMultipleBase ?? null,
+      roomCategory: first?.roomCategory ?? null,
+      waitingPeriodDays: first?.waitingPeriodDays ?? null,
+      benefitMaxAnnual: first?.benefitMaxAnnual ?? null,
+      benefitMaxCurrency: first?.benefitMaxCurrency ?? null,
+      reimbursementPercent: first?.reimbursementPercent ?? null,
+      benefitDurationDays: first?.benefitDurationDays ?? null,
+      eliminationPeriodDays: first?.eliminationPeriodDays ?? null,
+      // Coverage Scope
+      insuredLives: first?.insuredLives ?? null,
+      dependentCoverageType: first?.dependentCoverageType ?? null,
+      maxDependentsPerEmployee: first?.maxDependentsPerEmployee ?? null,
+      coverageScope: first?.coverageScope ?? null,
+      networkType: first?.networkType ?? null,
+      hospitalLevel: first?.hospitalLevel ?? null,
+      // Regulatory & Tax
+      mandatoryClassification: first?.mandatoryClassification ?? null,
+      taxTreatment: first?.taxTreatment ?? null,
+      taxRatePercent: first?.taxRatePercent ?? null,
+      employeeEligibility: first?.employeeEligibility ?? null,
+      eligibilityNotes: first?.eligibilityNotes ?? null,
+      // Carrier & Broker Detail
+      carrierTerminationNoticeDays: first?.carrierTerminationNoticeDays ?? null,
+      brokerCommissionPercent: first?.brokerCommissionPercent ?? null,
+      brokerFee: first?.brokerFee ?? null,
+      brokerFeeCurrency: first?.brokerFeeCurrency ?? null,
+      // Multinational Pooling
+      inMultinationalPool: first?.inMultinationalPool ?? false,
+      poolProviderName: first?.poolProviderName ?? null,
+      // Bundling / Riders
+      isRider: first?.isRider ?? false,
+      parentBenefitEntryId: first?.parentBenefitEntryId ?? null,
+      riderDescription: first?.riderDescription ?? null,
+      // Maternity Specific
+      maternityNormalDelivery: first?.maternityNormalDelivery ?? null,
+      maternityCSection: first?.maternityCSection ?? null,
+      maternityCurrency: first?.maternityCurrency ?? null,
+      // Dental Specific
+      dentalAnnualMax: first?.dentalAnnualMax ?? null,
+      dentalPreventiveCoverage: first?.dentalPreventiveCoverage ?? null,
+      dentalMajorCoverage: first?.dentalMajorCoverage ?? null,
+      // Vision Specific
+      visionAnnualMax: first?.visionAnnualMax ?? null,
+      visionExamCovered: first?.visionExamCovered ?? null,
+      // Policy Metadata
+      policyContractLength: first?.policyContractLength ?? null,
+      lastRenewalOutcome: first?.lastRenewalOutcome ?? null,
+      // Generosity
+      generosityScore: first ? calculateGenerosityScore(first, null) : null,
     };
   });
 }

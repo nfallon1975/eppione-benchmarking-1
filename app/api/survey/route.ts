@@ -209,10 +209,39 @@ export async function GET() {
       };
     }
 
+    // Calculate pre-population completeness for platform-sourced data
+    let prePopulatedFields = 0;
+    let totalPossibleFields = 0;
+    const planDesignCheckFields = [
+      "mandatoryClassification", "sumInsured", "coverMultiple", "coverMultipleBase",
+      "taxTreatment", "coverageScope", "insuredLives", "dependentCoverageType",
+      "employeeEligibility", "deductibleAmount", "coPayPercent", "reimbursementPercent",
+      "roomCategory", "networkType", "benefitMaxAnnual", "brokerCommissionPercent",
+      "inMultinationalPool", "policyContractLength", "lastRenewalOutcome",
+      "carrierTerminationNoticeDays", "brokerFee", "waitingPeriodDays",
+    ];
+    for (const entry of company.benefitEntries) {
+      totalPossibleFields += planDesignCheckFields.length;
+      for (const field of planDesignCheckFields) {
+        const val = (entry as Record<string, unknown>)[field];
+        if (val !== null && val !== undefined && val !== "" && val !== false) {
+          prePopulatedFields++;
+        }
+      }
+    }
+
+    const prePopulationInfo = company.benefitEntries.length > 0 ? {
+      totalBenefits: company.benefitEntries.length,
+      fieldsPopulated: prePopulatedFields,
+      fieldsPossible: totalPossibleFields,
+      message: `Pre-filled from your Eppione portal: ${prePopulatedFields} of ${totalPossibleFields} fields populated. Add more detail for richer benchmarks.`,
+    } : null;
+
     return NextResponse.json({
       draft: null,
       initialData: surveyData,
       countryConfigs,
+      prePopulationInfo,
     });
   } catch (error) {
     console.error("Error fetching survey:", error);
@@ -360,6 +389,50 @@ function benefitEntryToFormData(entry: {
   brokerSatisfactionScore?: number | null;
   renewalDate?: Date | null;
   benefitSatisfactionScore?: number | null;
+  // Plan Design
+  mandatoryClassification?: string | null;
+  sumInsured?: number | null;
+  sumInsuredCurrency?: string | null;
+  coverMultiple?: number | null;
+  coverMultipleBase?: string | null;
+  taxTreatment?: string | null;
+  coverageScope?: string | null;
+  insuredLives?: number | null;
+  dependentCoverageType?: string | null;
+  employeeEligibility?: string | null;
+  eligibilityNotes?: string | null;
+  deductibleAmount?: number | null;
+  deductibleCurrency?: string | null;
+  coPayPercent?: number | null;
+  coPayMaxAmount?: number | null;
+  reimbursementPercent?: number | null;
+  roomCategory?: string | null;
+  hospitalLevel?: string | null;
+  networkType?: string | null;
+  benefitMaxAnnual?: number | null;
+  benefitMaxCurrency?: string | null;
+  maternityNormalDelivery?: number | null;
+  maternityCSection?: number | null;
+  maternityCurrency?: string | null;
+  dentalAnnualMax?: number | null;
+  dentalPreventiveCoverage?: boolean | null;
+  dentalMajorCoverage?: boolean | null;
+  visionAnnualMax?: number | null;
+  visionExamCovered?: boolean | null;
+  eliminationPeriodDays?: number | null;
+  benefitDurationDays?: number | null;
+  waitingPeriodDays?: number | null;
+  isRider?: boolean;
+  parentBenefitEntryId?: string | null;
+  riderDescription?: string | null;
+  brokerCommissionPercent?: number | null;
+  brokerFee?: number | null;
+  brokerFeeCurrency?: string | null;
+  carrierTerminationNoticeDays?: number | null;
+  inMultinationalPool?: boolean;
+  poolProviderName?: string | null;
+  policyContractLength?: number | null;
+  lastRenewalOutcome?: string | null;
 }): BenefitFormData {
   return {
     tempId: entry.id,
@@ -443,5 +516,49 @@ function benefitEntryToFormData(entry: {
     brokerSatisfactionScore: entry.brokerSatisfactionScore ?? null,
     renewalDate: entry.renewalDate ? entry.renewalDate.toISOString().split("T")[0] : "",
     benefitSatisfactionScore: entry.benefitSatisfactionScore ?? null,
+    // Plan Design
+    mandatoryClassification: entry.mandatoryClassification ?? null,
+    sumInsured: entry.sumInsured ?? null,
+    sumInsuredCurrency: entry.sumInsuredCurrency || "EUR",
+    coverMultiple: entry.coverMultiple ?? null,
+    coverMultipleBase: entry.coverMultipleBase ?? null,
+    taxTreatment: entry.taxTreatment ?? null,
+    coverageScope: entry.coverageScope ?? null,
+    insuredLives: entry.insuredLives ?? null,
+    dependentCoverageType: entry.dependentCoverageType ?? null,
+    employeeEligibility: entry.employeeEligibility ?? null,
+    eligibilityNotes: entry.eligibilityNotes ?? null,
+    deductibleAmount: entry.deductibleAmount ?? null,
+    deductibleCurrency: entry.deductibleCurrency || "EUR",
+    coPayPercent: entry.coPayPercent ?? null,
+    coPayMaxAmount: entry.coPayMaxAmount ?? null,
+    reimbursementPercent: entry.reimbursementPercent ?? null,
+    roomCategory: entry.roomCategory ?? null,
+    hospitalLevel: entry.hospitalLevel ?? null,
+    networkType: entry.networkType ?? null,
+    benefitMaxAnnual: entry.benefitMaxAnnual ?? null,
+    benefitMaxCurrency: entry.benefitMaxCurrency || "EUR",
+    maternityNormalDelivery: entry.maternityNormalDelivery ?? null,
+    maternityCSection: entry.maternityCSection ?? null,
+    maternityCurrency: entry.maternityCurrency || "EUR",
+    dentalAnnualMax: entry.dentalAnnualMax ?? null,
+    dentalPreventiveCoverage: entry.dentalPreventiveCoverage ?? null,
+    dentalMajorCoverage: entry.dentalMajorCoverage ?? null,
+    visionAnnualMax: entry.visionAnnualMax ?? null,
+    visionExamCovered: entry.visionExamCovered ?? null,
+    eliminationPeriodDays: entry.eliminationPeriodDays ?? null,
+    benefitDurationDays: entry.benefitDurationDays ?? null,
+    waitingPeriodDays: entry.waitingPeriodDays ?? null,
+    isRider: entry.isRider ?? false,
+    parentBenefitEntryId: entry.parentBenefitEntryId ?? null,
+    riderDescription: entry.riderDescription ?? null,
+    brokerCommissionPercent: entry.brokerCommissionPercent ?? null,
+    brokerFee: entry.brokerFee ?? null,
+    brokerFeeCurrency: entry.brokerFeeCurrency || "EUR",
+    carrierTerminationNoticeDays: entry.carrierTerminationNoticeDays ?? null,
+    inMultinationalPool: entry.inMultinationalPool ?? false,
+    poolProviderName: entry.poolProviderName ?? null,
+    policyContractLength: entry.policyContractLength ?? null,
+    lastRenewalOutcome: entry.lastRenewalOutcome ?? null,
   };
 }

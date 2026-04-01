@@ -115,6 +115,59 @@ export interface BenefitFormData {
   // Renewal / Satisfaction
   renewalDate: string;
   benefitSatisfactionScore: number | null;
+  // Plan Design (cross-category)
+  mandatoryClassification: string | null;
+  sumInsured: number | null;
+  sumInsuredCurrency: string;
+  coverMultiple: number | null;
+  coverMultipleBase: string | null;
+  taxTreatment: string | null;
+  coverageScope: string | null;
+  insuredLives: number | null;
+  dependentCoverageType: string | null;
+  employeeEligibility: string | null;
+  eligibilityNotes: string | null;
+  // Health plan design
+  deductibleAmount: number | null;
+  deductibleCurrency: string;
+  coPayPercent: number | null;
+  coPayMaxAmount: number | null;
+  reimbursementPercent: number | null;
+  roomCategory: string | null;
+  hospitalLevel: string | null;
+  networkType: string | null;
+  benefitMaxAnnual: number | null;
+  benefitMaxCurrency: string;
+  maternityNormalDelivery: number | null;
+  maternityCSection: number | null;
+  maternityCurrency: string;
+  // Dental plan design
+  dentalAnnualMax: number | null;
+  dentalPreventiveCoverage: boolean | null;
+  dentalMajorCoverage: boolean | null;
+  // Vision
+  visionAnnualMax: number | null;
+  visionExamCovered: boolean | null;
+  // Income protection plan design
+  eliminationPeriodDays: number | null;
+  benefitDurationDays: number | null;
+  // Critical illness plan design
+  waitingPeriodDays: number | null;
+  // Risk riders
+  isRider: boolean;
+  parentBenefitEntryId: string | null;
+  riderDescription: string | null;
+  // Carrier & broker detail
+  brokerCommissionPercent: number | null;
+  brokerFee: number | null;
+  brokerFeeCurrency: string;
+  carrierTerminationNoticeDays: number | null;
+  // Multinational pooling
+  inMultinationalPool: boolean;
+  poolProviderName: string | null;
+  // Policy metadata
+  policyContractLength: number | null;
+  lastRenewalOutcome: string | null;
 }
 
 export interface CategoryData {
@@ -254,6 +307,50 @@ export function createEmptyBenefit(currency: string = "EUR"): BenefitFormData {
     brokerSatisfactionScore: null,
     renewalDate: "",
     benefitSatisfactionScore: null,
+    // Plan Design
+    mandatoryClassification: null,
+    sumInsured: null,
+    sumInsuredCurrency: currency,
+    coverMultiple: null,
+    coverMultipleBase: null,
+    taxTreatment: null,
+    coverageScope: null,
+    insuredLives: null,
+    dependentCoverageType: null,
+    employeeEligibility: null,
+    eligibilityNotes: null,
+    deductibleAmount: null,
+    deductibleCurrency: currency,
+    coPayPercent: null,
+    coPayMaxAmount: null,
+    reimbursementPercent: null,
+    roomCategory: null,
+    hospitalLevel: null,
+    networkType: null,
+    benefitMaxAnnual: null,
+    benefitMaxCurrency: currency,
+    maternityNormalDelivery: null,
+    maternityCSection: null,
+    maternityCurrency: currency,
+    dentalAnnualMax: null,
+    dentalPreventiveCoverage: null,
+    dentalMajorCoverage: null,
+    visionAnnualMax: null,
+    visionExamCovered: null,
+    eliminationPeriodDays: null,
+    benefitDurationDays: null,
+    waitingPeriodDays: null,
+    isRider: false,
+    parentBenefitEntryId: null,
+    riderDescription: null,
+    brokerCommissionPercent: null,
+    brokerFee: null,
+    brokerFeeCurrency: currency,
+    carrierTerminationNoticeDays: null,
+    inMultinationalPool: false,
+    poolProviderName: null,
+    policyContractLength: null,
+    lastRenewalOutcome: null,
   };
 }
 

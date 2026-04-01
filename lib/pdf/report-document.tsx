@@ -18,7 +18,17 @@ import {
   FEE_MODEL_LABELS,
   formatCurrency,
 } from "@/lib/utils";
-import type { BenchmarkResult } from "@/lib/benchmarking-types";
+import type {
+  BenchmarkResult,
+  CategoryBenchmark,
+  PercentileStats,
+  DistributionEntry,
+} from "@/lib/benchmarking-types";
+import {
+  COVERAGE_SCOPE_LABELS,
+  DEPENDENT_COVERAGE_TYPE_LABELS,
+  MANDATORY_CLASSIFICATION_LABELS,
+} from "@/lib/benchmarking-types";
 
 const COUNTRY_FLAGS: Record<string, string> = {
   IE: "🇮🇪",
@@ -1283,6 +1293,215 @@ function ComplianceSummaryPage({ data }: { data: ComplianceReportData; }) {
   );
 }
 
+// ─── Plan Design Benchmark Section ───
+
+function PlanDesignStatRow({
+  label,
+  stats,
+  yourValue,
+  format,
+}: {
+  label: string;
+  stats: PercentileStats | null;
+  yourValue: number | null | undefined;
+  format?: (v: number) => string;
+}) {
+  if (!stats) return null;
+  const fmt = format || ((v: number) => String(Math.round(v * 100) / 100));
+  return (
+    <View style={styles.tableRow}>
+      <Text style={[styles.tableCell, { width: "28%" }]}>{label}</Text>
+      <Text style={[styles.tableCell, { width: "18%", textAlign: "center" }]}>{fmt(stats.p25)}</Text>
+      <Text style={[styles.tableCell, { width: "18%", textAlign: "center" }]}>{fmt(stats.median)}</Text>
+      <Text style={[styles.tableCell, { width: "18%", textAlign: "center" }]}>{fmt(stats.p75)}</Text>
+      <Text
+        style={[
+          styles.tableCell,
+          { width: "18%", textAlign: "center", fontFamily: "Helvetica-Bold", color: BRAND.cyan },
+        ]}
+      >
+        {yourValue !== null && yourValue !== undefined ? fmt(yourValue) : "—"}
+      </Text>
+    </View>
+  );
+}
+
+function BreakdownList({ title, items }: { title: string; items: DistributionEntry[] }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <View style={{ marginTop: 4 }}>
+      <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", color: BRAND.slate700, marginBottom: 2 }}>
+        {title}
+      </Text>
+      {items.map((item) => (
+        <Text key={item.type} style={{ fontSize: 8, color: BRAND.slate500, marginLeft: 8 }}>
+          {item.type}: {item.count} ({item.percentage}%)
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+function PlanDesignBenchmarkSection({ data }: { data: ReportData }) {
+  const bm = data.singleCountryData;
+  if (!bm) return null;
+
+  const catsWithPlanDesign = bm.categories.filter((c) => c.planDesignStats != null);
+  if (catsWithPlanDesign.length === 0) return null;
+
+  // Split into pages of ~2 categories each (plan design tables are tall)
+  const perPage = 2;
+  const pages: CategoryBenchmark[][] = [];
+  for (let i = 0; i < catsWithPlanDesign.length; i += perPage) {
+    pages.push(catsWithPlanDesign.slice(i, i + perPage));
+  }
+
+  return (
+    <>
+      {pages.map((group, pageIdx) => (
+        <Page key={`pd-${pageIdx}`} size="A4" style={styles.page}>
+          {pageIdx === 0 && (
+            <>
+              <Text style={styles.sectionHeader}>Plan Design Benchmarks</Text>
+              <Text style={styles.sectionDescription}>
+                Detailed plan design comparison with market percentiles
+              </Text>
+            </>
+          )}
+
+          {group.map((cat) => {
+            const pd = cat.planDesignStats!;
+            const pos = bm.companyPosition?.find((p) => p.category === cat.category);
+            const gi = cat.generosityIndex;
+            const bc = cat.brokerCarrierStats;
+            const reg = cat.regulatoryStats;
+
+            // Resolve breakdown labels
+            const coverageScopeItems = pd.coverageScopeBreakdown.map((d) => ({
+              ...d,
+              type: COVERAGE_SCOPE_LABELS[d.type] || d.type,
+            }));
+            const depCoverItems = pd.dependentCoverageTypeBreakdown.map((d) => ({
+              ...d,
+              type: DEPENDENT_COVERAGE_TYPE_LABELS[d.type] || d.type,
+            }));
+            const mandatoryItems = reg?.mandatoryClassificationBreakdown.map((d) => ({
+              ...d,
+              type: MANDATORY_CLASSIFICATION_LABELS[d.type] || d.type,
+            })) || [];
+
+            return (
+              <View key={cat.category} style={{ marginBottom: 14 }}>
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontFamily: "Helvetica-Bold",
+                    color: BRAND.navy,
+                    marginBottom: 4,
+                  }}
+                >
+                  Plan Design — {BENEFIT_CATEGORY_LABELS[cat.category] || cat.category}
+                </Text>
+
+                {/* Main percentile table */}
+                <View style={styles.table}>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderCell, { width: "28%" }]}>Metric</Text>
+                    <Text style={[styles.tableHeaderCell, { width: "18%", textAlign: "center" }]}>P25</Text>
+                    <Text style={[styles.tableHeaderCell, { width: "18%", textAlign: "center" }]}>Median</Text>
+                    <Text style={[styles.tableHeaderCell, { width: "18%", textAlign: "center" }]}>P75</Text>
+                    <Text style={[styles.tableHeaderCell, { width: "18%", textAlign: "center" }]}>Your Value</Text>
+                  </View>
+                  <PlanDesignStatRow
+                    label="Deductible"
+                    stats={pd.deductibleStats}
+                    yourValue={pos?.deductibleAmount}
+                    format={(v) => formatCurrency(v, data.config.currency)}
+                  />
+                  <PlanDesignStatRow
+                    label="Co-pay %"
+                    stats={pd.coPayPercentStats}
+                    yourValue={pos?.coPayPercent}
+                    format={(v) => `${Math.round(v)}%`}
+                  />
+                  <PlanDesignStatRow
+                    label="Sum Insured"
+                    stats={pd.sumInsuredStats}
+                    yourValue={pos?.sumInsured}
+                    format={(v) => formatCurrency(v, data.config.currency)}
+                  />
+                  <PlanDesignStatRow
+                    label="Cover Multiple"
+                    stats={pd.coverMultipleStats}
+                    yourValue={pos?.coverMultiple}
+                    format={(v) => `${v}x`}
+                  />
+                  <PlanDesignStatRow
+                    label="Reimbursement %"
+                    stats={pd.reimbursementPercentStats}
+                    yourValue={pos?.reimbursementPercent}
+                    format={(v) => `${Math.round(v)}%`}
+                  />
+                  <PlanDesignStatRow
+                    label="Benefit Max Annual"
+                    stats={pd.benefitMaxAnnualStats}
+                    yourValue={pos?.benefitMaxAnnual}
+                    format={(v) => formatCurrency(v, data.config.currency)}
+                  />
+                </View>
+
+                {/* Breakdown summaries */}
+                <View style={{ flexDirection: "row", gap: 16, marginTop: 2, flexWrap: "wrap" }}>
+                  <BreakdownList title="Coverage Scope" items={coverageScopeItems} />
+                  <BreakdownList title="Dependent Coverage" items={depCoverItems} />
+                  <BreakdownList title="Mandatory Classification" items={mandatoryItems} />
+                </View>
+
+                {/* Generosity Index */}
+                {gi && gi.stats && pos?.generosityScore != null && (
+                  <View style={{ marginTop: 6 }}>
+                    <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", color: BRAND.navy }}>
+                      Generosity Score: {Math.round(pos.generosityScore)}/100 (Market median: {Math.round(gi.stats.median)})
+                    </Text>
+                  </View>
+                )}
+
+                {/* Broker Intelligence */}
+                {bc && (
+                  <View style={{ marginTop: 6 }}>
+                    <Text
+                      style={{
+                        fontSize: 9,
+                        fontFamily: "Helvetica-Bold",
+                        color: BRAND.navy,
+                        marginBottom: 2,
+                      }}
+                    >
+                      Broker Intelligence
+                    </Text>
+                    {bc.brokerCommissionStats && (
+                      <Text style={{ fontSize: 8, color: BRAND.slate500 }}>
+                        Commission rate — P25: {bc.brokerCommissionStats.p25}% | Median: {bc.brokerCommissionStats.median}% | P75: {bc.brokerCommissionStats.p75}%
+                        {pos?.brokerCommissionPercent != null ? ` | Yours: ${pos.brokerCommissionPercent}%` : ""}
+                      </Text>
+                    )}
+                    <Text style={{ fontSize: 8, color: BRAND.slate500 }}>
+                      Multinational pooling: {bc.pctInMultinationalPool}% of companies
+                      {pos?.inMultinationalPool != null ? ` | You: ${pos.inMultinationalPool ? "Yes" : "No"}` : ""}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+
+          <PageFooter />
+        </Page>
+      ))}
+    </>
+  );
+}
+
 export function BenchmarkReportDocument({ data }: { data: ReportData }) {
   const isGlobal = data.config.reportType === "global";
 
@@ -1316,6 +1535,9 @@ export function BenchmarkReportDocument({ data }: { data: ReportData }) {
 
       {/* Pension Benchmarking */}
       <PensionBenchmarkPage data={data} />
+
+      {/* Plan Design Benchmarks */}
+      <PlanDesignBenchmarkSection data={data} />
 
       {/* Platform Benchmarks */}
       {data.config.includePlatformBenchmarks && <PlatformPage data={data} />}

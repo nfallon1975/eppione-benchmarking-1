@@ -370,6 +370,76 @@ model BenefitEntry {
   brokerSatisfactionScore     Int?            // 1-10
   renewalDate                 DateTime?
   benefitSatisfactionScore    Int?            // 1-10
+
+  // ─── Plan Design (structured) ───
+  deductibleAmount            Float?          // e.g. 100.00 (GBP 100 excess)
+  deductibleCurrency          String?         // ISO currency code
+  coPayPercent                Float?          // e.g. 20 for 20% co-pay
+  coPayMaxAmount              Float?          // max co-pay cap per claim/year
+  sumInsured                  Float?          // total sum insured amount
+  sumInsuredCurrency          String?         // ISO currency code
+  coverMultiple               Float?          // e.g. 2.0 for "2x salary"
+  coverMultipleBase           String?         // "BASIC_SALARY", "ANNUAL_CTC", "FIXED_AMOUNT"
+  roomCategory                String?         // PRIVATE, SEMI_PRIVATE, STANDARD, NA
+  waitingPeriodDays           Int?            // e.g. 90 for 90-day waiting period
+  benefitMaxAnnual            Float?          // annual maximum benefit amount
+  benefitMaxCurrency          String?         // currency for annual max
+  reimbursementPercent        Float?          // e.g. 100 for full refund, 80 for 80%
+  benefitDurationDays         Int?            // max benefit duration (e.g. 730 for LTD)
+  eliminationPeriodDays       Int?            // elimination/qualifying period for income protection
+
+  // ─── Coverage Scope ───
+  insuredLives                Int?            // total insured lives including dependents
+  dependentCoverageType       String?         // NONE, SPOUSE_ONLY, FAMILY, CHILDREN_ONLY
+  maxDependentsPerEmployee    Int?            // null = unlimited
+  coverageScope               String?         // LOCAL, NATIONAL, REGIONAL, WORLDWIDE
+  networkType                 String?         // PANEL, NON_PANEL, BOTH, OPEN_ACCESS
+  hospitalLevel               String?         // EXECUTIVE, PRIVATE, SEMI_PRIVATE, STANDARD, ANY
+
+  // ─── Regulatory & Tax ───
+  mandatoryClassification     String?         // MANDATORY, SUPPLEMENTAL, HYBRID
+  taxTreatment                String?         // INCLUDES_TAX, EXCLUDES_TAX, TAX_EXEMPT
+  taxRatePercent              Float?          // local tax rate on premiums
+  employeeEligibility         String?         // ALL_EMPLOYEES, MANAGERS_ONLY, DIRECTORS_ONLY, CUSTOM
+  eligibilityNotes            String?         // free text
+
+  // ─── Carrier & Broker Detail ───
+  carrierTerminationNoticeDays Int?           // notice period to switch carrier
+  brokerCommissionPercent     Float?          // broker commission rate
+  brokerFee                   Float?          // broker fee excluding commission
+  brokerFeeCurrency           String?         // currency for broker fee
+
+  // ─── Multinational Pooling ───
+  inMultinationalPool         Boolean         @default(false)
+  poolProviderName            String?         // e.g. "Swiss Re Network"
+
+  // ─── Bundling / Riders ───
+  isRider                     Boolean         @default(false)
+  parentBenefitEntryId        String?         // FK to parent BenefitEntry if this is a rider
+  riderDescription            String?         // e.g. "TPD & Accident rider on Life policy"
+
+  // ─── Maternity Specific ───
+  maternityNormalDelivery     Float?          // cover amount for normal delivery
+  maternityCSection           Float?          // cover amount for C-section
+  maternityCurrency           String?
+
+  // ─── Dental Specific ───
+  dentalAnnualMax             Float?          // annual dental maximum
+  dentalPreventiveCoverage    Boolean?        // cleanings, checkups covered
+  dentalMajorCoverage         Boolean?        // crowns, root canals, orthodontics
+
+  // ─── Vision Specific ───
+  visionAnnualMax             Float?          // annual vision benefit max
+  visionExamCovered           Boolean?
+
+  // ─── Policy Metadata ───
+  policyContractLength        Int?            // contract length in years
+  lastRenewalOutcome          String?         // RENEWED_AS_IS, RENEWED_WITH_CHANGES, REMARKET, NEW_PLACEMENT
+
+  // Self-relation for riders
+  parentBenefitEntry          BenefitEntry?   @relation("Riders", fields: [parentBenefitEntryId], references: [id])
+  riders                      BenefitEntry[]  @relation("Riders")
+
   complianceResults           ComplianceCheckResult[]
   healthLimits                HealthLimit[]
   createdAt                   DateTime        @default(now())

@@ -33,6 +33,31 @@ const BENEFIT_COLUMNS: Record<string, string> = {
   paternityTotalLeaveWeeks: "", paternityAboveStatutory: "", paternitySharedParentalLeave: "",
   // Meta
   provider: "", notes: "",
+  // Plan Design
+  deductibleAmount: "", deductibleCurrency: "", coPayPercent: "", coPayMaxAmount: "",
+  sumInsured: "", sumInsuredCurrency: "", coverMultiple: "", coverMultipleBase: "",
+  roomCategory: "", waitingPeriodDays: "", benefitMaxAnnual: "", benefitMaxCurrency: "",
+  reimbursementPercent: "", benefitDurationDays: "", eliminationPeriodDays: "",
+  // Coverage Scope
+  insuredLives: "", dependentCoverageType: "", maxDependentsPerEmployee: "",
+  coverageScope: "", networkType: "", hospitalLevel: "",
+  // Regulatory & Tax
+  mandatoryClassification: "", taxTreatment: "", taxRatePercent: "",
+  employeeEligibility: "", eligibilityNotes: "",
+  // Carrier & Broker Detail
+  carrierTerminationNoticeDays: "", brokerCommissionPercent: "", brokerFee: "", brokerFeeCurrency: "",
+  // Multinational Pooling
+  inMultinationalPool: "", poolProviderName: "",
+  // Bundling / Riders
+  isRider: "", parentBenefitEntryId: "", riderDescription: "",
+  // Maternity Specific
+  maternityNormalDelivery: "", maternityCSection: "", maternityCurrency: "",
+  // Dental Specific
+  dentalAnnualMax: "", dentalPreventiveCoverage: "", dentalMajorCoverage: "",
+  // Vision Specific
+  visionAnnualMax: "", visionExamCovered: "",
+  // Policy Metadata
+  policyContractLength: "", lastRenewalOutcome: "",
 };
 
 export function getClientBenefitTemplate(): Record<string, string>[] {

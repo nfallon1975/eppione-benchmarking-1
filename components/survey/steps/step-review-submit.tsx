@@ -14,7 +14,96 @@ import {
   FEE_MODEL_LABELS,
   formatCurrency,
 } from "@/lib/utils";
-import { SurveyData, CountryConfigData } from "@/lib/survey-types";
+import { SurveyData, CountryConfigData, BenefitFormData } from "@/lib/survey-types";
+
+const BASIC_FIELDS: (keyof BenefitFormData)[] = [
+  "benefitName",
+  "coverLevel",
+  "provider",
+  "annualCostPerEmployee",
+  "costCurrency",
+  "employerFunded",
+  "coversSpouse",
+  "coversDependents",
+];
+
+const DETAIL_FIELDS: (keyof BenefitFormData)[] = [
+  "mandatoryClassification",
+  "sumInsured",
+  "coverMultiple",
+  "coverMultipleBase",
+  "taxTreatment",
+  "coverageScope",
+  "insuredLives",
+  "dependentCoverageType",
+  "employeeEligibility",
+  "deductibleAmount",
+  "coPayPercent",
+  "reimbursementPercent",
+  "roomCategory",
+  "networkType",
+  "benefitMaxAnnual",
+  "brokerCommissionPercent",
+  "inMultinationalPool",
+  "policyContractLength",
+  "lastRenewalOutcome",
+];
+
+function isFilled(value: unknown, key: string): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim() !== "";
+  if (typeof value === "number") return true;
+  if (typeof value === "boolean") {
+    // For booleans, check if they differ from default
+    if (key === "employerFunded") return value !== true;
+    if (key === "coversSpouse" || key === "coversDependents") return value !== false;
+    if (key === "inMultinationalPool") return value !== false;
+    return true;
+  }
+  return false;
+}
+
+function calculateCompleteness(data: SurveyData): {
+  basicPercent: number;
+  detailPercent: number;
+} {
+  const allBenefits: BenefitFormData[] = [];
+
+  // Collect benefits from step2 and step3
+  for (const countriesData of [data.step2.countriesData, data.step3.countriesData]) {
+    for (const categories of Object.values(countriesData)) {
+      for (const catData of Object.values(categories)) {
+        if (catData && !catData.notOffered && catData.benefits) {
+          allBenefits.push(...catData.benefits);
+        }
+      }
+    }
+  }
+
+  if (allBenefits.length === 0) {
+    return { basicPercent: 0, detailPercent: 0 };
+  }
+
+  let basicFilled = 0;
+  const basicTotal = allBenefits.length * BASIC_FIELDS.length;
+
+  let detailFilled = 0;
+  const detailTotal = allBenefits.length * DETAIL_FIELDS.length;
+
+  for (const benefit of allBenefits) {
+    for (const field of BASIC_FIELDS) {
+      if (isFilled(benefit[field], field)) basicFilled++;
+    }
+    for (const field of DETAIL_FIELDS) {
+      if (isFilled(benefit[field], field)) detailFilled++;
+    }
+  }
+
+  return {
+    basicPercent: Math.round((basicFilled / basicTotal) * 100),
+    detailPercent: Math.round((detailFilled / detailTotal) * 100),
+  };
+}
 
 interface StepReviewSubmitProps {
   data: SurveyData;
@@ -27,6 +116,7 @@ export function StepReviewSubmit({
   onEditStep,
 }: StepReviewSubmitProps) {
   const { step1, step2, step3, step4 } = data;
+  const { basicPercent, detailPercent } = calculateCompleteness(data);
 
   return (
     <div className="space-y-6">
@@ -36,6 +126,42 @@ export function StepReviewSubmit({
           Review your survey data before submitting. Click Edit to make changes.
         </p>
       </div>
+
+      {/* Data Completeness */}
+      <Card>
+        <CardContent className="pt-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">
+            Data Completeness
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center justify-between text-sm mb-1">
+                <span className="text-slate-700">Basic data: {basicPercent}% complete</span>
+              </div>
+              <div className="h-2 rounded bg-slate-200">
+                <div
+                  className="h-2 rounded bg-cyan-500 transition-all"
+                  style={{ width: `${basicPercent}%` }}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between text-sm mb-1">
+                <span className="text-slate-700">Detailed plan design: {detailPercent}% complete</span>
+              </div>
+              <div className="h-2 rounded bg-slate-200">
+                <div
+                  className="h-2 rounded bg-slate-500 transition-all"
+                  style={{ width: `${detailPercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+          <p className="mt-3 text-sm italic text-slate-500">
+            More detail = more accurate benchmarks. You can always come back and add more later.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Industry (company-wide) */}
       <Card>

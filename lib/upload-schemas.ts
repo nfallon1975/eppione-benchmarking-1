@@ -95,6 +95,61 @@ export const clientBenefitRowSchema = z.object({
   // Optional string
   provider: z.preprocess((v) => v === undefined || v === null ? "" : String(v), z.string()).default(""),
   notes: z.preprocess((v) => v === undefined || v === null ? "" : String(v), z.string()).default(""),
+  // Plan Design
+  deductibleAmount: z.preprocess(parseNumber, z.number().nullable()).default(null),
+  deductibleCurrency: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  coPayPercent: z.preprocess(parseNumber, z.number().min(0).max(100).nullable()).default(null),
+  coPayMaxAmount: z.preprocess(parseNumber, z.number().nullable()).default(null),
+  sumInsured: z.preprocess(parseNumber, z.number().nullable()).default(null),
+  sumInsuredCurrency: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  coverMultiple: z.preprocess(parseNumber, z.number().nullable()).default(null),
+  coverMultipleBase: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  roomCategory: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  waitingPeriodDays: z.preprocess(parseNumber, z.number().int().nullable()).default(null),
+  benefitMaxAnnual: z.preprocess(parseNumber, z.number().nullable()).default(null),
+  benefitMaxCurrency: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  reimbursementPercent: z.preprocess(parseNumber, z.number().min(0).max(100).nullable()).default(null),
+  benefitDurationDays: z.preprocess(parseNumber, z.number().int().nullable()).default(null),
+  eliminationPeriodDays: z.preprocess(parseNumber, z.number().int().nullable()).default(null),
+  // Coverage Scope
+  insuredLives: z.preprocess(parseNumber, z.number().int().nullable()).default(null),
+  dependentCoverageType: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  maxDependentsPerEmployee: z.preprocess(parseNumber, z.number().int().nullable()).default(null),
+  coverageScope: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  networkType: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  hospitalLevel: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  // Regulatory & Tax
+  mandatoryClassification: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  taxTreatment: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  taxRatePercent: z.preprocess(parseNumber, z.number().min(0).max(100).nullable()).default(null),
+  employeeEligibility: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  eligibilityNotes: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v), z.string().nullable()).default(null),
+  // Carrier & Broker Detail
+  carrierTerminationNoticeDays: z.preprocess(parseNumber, z.number().int().nullable()).default(null),
+  brokerCommissionPercent: z.preprocess(parseNumber, z.number().min(0).max(100).nullable()).default(null),
+  brokerFee: z.preprocess(parseNumber, z.number().nullable()).default(null),
+  brokerFeeCurrency: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  // Multinational Pooling
+  inMultinationalPool: z.preprocess((v) => v === "" || v === undefined || v === null ? false : parseBool(v), z.boolean()).default(false),
+  poolProviderName: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v), z.string().nullable()).default(null),
+  // Bundling / Riders
+  isRider: z.preprocess((v) => v === "" || v === undefined || v === null ? false : parseBool(v), z.boolean()).default(false),
+  parentBenefitEntryId: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v), z.string().nullable()).default(null),
+  riderDescription: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v), z.string().nullable()).default(null),
+  // Maternity Specific
+  maternityNormalDelivery: z.preprocess(parseNumber, z.number().nullable()).default(null),
+  maternityCSection: z.preprocess(parseNumber, z.number().nullable()).default(null),
+  maternityCurrency: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
+  // Dental Specific
+  dentalAnnualMax: z.preprocess(parseNumber, z.number().nullable()).default(null),
+  dentalPreventiveCoverage: z.preprocess((v) => v === "" || v === undefined || v === null ? null : parseBool(v), z.boolean().nullable()).default(null),
+  dentalMajorCoverage: z.preprocess((v) => v === "" || v === undefined || v === null ? null : parseBool(v), z.boolean().nullable()).default(null),
+  // Vision Specific
+  visionAnnualMax: z.preprocess(parseNumber, z.number().nullable()).default(null),
+  visionExamCovered: z.preprocess((v) => v === "" || v === undefined || v === null ? null : parseBool(v), z.boolean().nullable()).default(null),
+  // Policy Metadata
+  policyContractLength: z.preprocess(parseNumber, z.number().int().nullable()).default(null),
+  lastRenewalOutcome: z.preprocess((v) => v === undefined || v === null || v === "" ? null : String(v).toUpperCase(), z.string().nullable()).default(null),
 });
 
 export type ClientBenefitUploadRow = z.infer<typeof clientBenefitRowSchema>;

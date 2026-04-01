@@ -86,6 +86,61 @@ export interface CompanyBenefitData {
   paternityTotalLeaveWeeks: number | null;
   paternityAboveStatutory: boolean | null;
   paternitySharedParentalLeave: boolean | null;
+  // Plan Design
+  deductibleAmount: number | null;
+  deductibleCurrency: string | null;
+  coPayPercent: number | null;
+  coPayMaxAmount: number | null;
+  sumInsured: number | null;
+  sumInsuredCurrency: string | null;
+  coverMultiple: number | null;
+  coverMultipleBase: string | null;
+  roomCategory: string | null;
+  waitingPeriodDays: number | null;
+  benefitMaxAnnual: number | null;
+  benefitMaxCurrency: string | null;
+  reimbursementPercent: number | null;
+  benefitDurationDays: number | null;
+  eliminationPeriodDays: number | null;
+  // Coverage Scope
+  insuredLives: number | null;
+  dependentCoverageType: string | null;
+  maxDependentsPerEmployee: number | null;
+  coverageScope: string | null;
+  networkType: string | null;
+  hospitalLevel: string | null;
+  // Regulatory & Tax
+  mandatoryClassification: string | null;
+  taxTreatment: string | null;
+  taxRatePercent: number | null;
+  employeeEligibility: string | null;
+  eligibilityNotes: string | null;
+  // Carrier & Broker Detail
+  carrierTerminationNoticeDays: number | null;
+  brokerCommissionPercent: number | null;
+  brokerFee: number | null;
+  brokerFeeCurrency: string | null;
+  // Multinational Pooling
+  inMultinationalPool: boolean;
+  poolProviderName: string | null;
+  // Bundling / Riders
+  isRider: boolean;
+  parentBenefitEntryId: string | null;
+  riderDescription: string | null;
+  // Maternity Specific
+  maternityNormalDelivery: number | null;
+  maternityCSection: number | null;
+  maternityCurrency: string | null;
+  // Dental Specific
+  dentalAnnualMax: number | null;
+  dentalPreventiveCoverage: boolean | null;
+  dentalMajorCoverage: boolean | null;
+  // Vision Specific
+  visionAnnualMax: number | null;
+  visionExamCovered: boolean | null;
+  // Policy Metadata
+  policyContractLength: number | null;
+  lastRenewalOutcome: string | null;
 }
 
 export const SALARY_BAND_LABELS: Record<string, string> = {
@@ -235,6 +290,117 @@ export interface PaternityPayCategoryStats {
   pctSharedParentalLeave: number;
 }
 
+// ─── Plan Design Stats ───
+
+export type DistributionEntry = { type: string; count: number; percentage: number };
+
+export interface PlanDesignCategoryStats {
+  deductibleStats: PercentileStats | null;
+  coPayPercentStats: PercentileStats | null;
+  coPayMaxStats: PercentileStats | null;
+  sumInsuredStats: PercentileStats | null;
+  coverMultipleStats: PercentileStats | null;
+  reimbursementPercentStats: PercentileStats | null;
+  benefitMaxAnnualStats: PercentileStats | null;
+  waitingPeriodDaysStats: PercentileStats | null;
+  benefitDurationDaysStats: PercentileStats | null;
+  eliminationPeriodDaysStats: PercentileStats | null;
+  insuredLivesStats: PercentileStats | null;
+  roomCategoryBreakdown: DistributionEntry[];
+  coverMultipleBaseBreakdown: DistributionEntry[];
+  networkTypeBreakdown: DistributionEntry[];
+  coverageScopeBreakdown: DistributionEntry[];
+  hospitalLevelBreakdown: DistributionEntry[];
+  dependentCoverageTypeBreakdown: DistributionEntry[];
+  detailedCompanyCount: number; // companies with plan design data
+}
+
+export interface GenerosityIndex {
+  scores: number[]; // all company scores in peer group
+  stats: PercentileStats | null;
+}
+
+export interface MaternitySpecificStats {
+  normalDeliveryStats: PercentileStats | null;
+  cSectionStats: PercentileStats | null;
+}
+
+export interface DentalSpecificStats {
+  dentalAnnualMaxStats: PercentileStats | null;
+  pctPreventiveCoverage: number;
+  pctMajorCoverage: number;
+}
+
+export interface VisionCategoryStats {
+  annualMaxStats: PercentileStats | null;
+  pctExamCovered: number;
+}
+
+export interface BrokerCarrierStats {
+  brokerCommissionStats: PercentileStats | null;
+  brokerFeeStats: PercentileStats | null;
+  terminationNoticeDaysStats: PercentileStats | null;
+  pctInMultinationalPool: number;
+  poolProviderBreakdown: DistributionEntry[];
+  carrierBreakdown: DistributionEntry[];
+}
+
+export interface PolicyMetadataStats {
+  contractLengthStats: PercentileStats | null;
+  lastRenewalOutcomeBreakdown: DistributionEntry[];
+}
+
+export interface RegulatoryStats {
+  mandatoryClassificationBreakdown: DistributionEntry[];
+  taxTreatmentBreakdown: DistributionEntry[];
+  employeeEligibilityBreakdown: DistributionEntry[];
+  pctRiders: number;
+}
+
+// ─── Label Maps ───
+
+export const ROOM_CATEGORY_LABELS: Record<string, string> = {
+  PRIVATE: "Private", SEMI_PRIVATE: "Semi-Private", STANDARD: "Standard", ANY: "Any", NA: "N/A",
+};
+
+export const NETWORK_TYPE_LABELS: Record<string, string> = {
+  PANEL: "Panel", NON_PANEL: "Non-Panel", BOTH: "Both", OPEN_ACCESS: "Open Access",
+};
+
+export const COVERAGE_SCOPE_LABELS: Record<string, string> = {
+  LOCAL: "Local", NATIONAL: "National", REGIONAL: "Regional", WORLDWIDE: "Worldwide",
+};
+
+export const HOSPITAL_LEVEL_LABELS: Record<string, string> = {
+  EXECUTIVE: "Executive", PRIVATE: "Private", SEMI_PRIVATE: "Semi-Private", STANDARD: "Standard", ANY: "Any",
+};
+
+export const DEPENDENT_COVERAGE_TYPE_LABELS: Record<string, string> = {
+  NONE: "None", SPOUSE_ONLY: "Spouse Only", FAMILY: "Family", CHILDREN_ONLY: "Children Only",
+};
+
+export const MANDATORY_CLASSIFICATION_LABELS: Record<string, string> = {
+  MANDATORY: "Mandatory", SUPPLEMENTAL: "Supplemental", HYBRID: "Hybrid",
+};
+
+export const TAX_TREATMENT_LABELS: Record<string, string> = {
+  INCLUDES_TAX: "Includes Tax", EXCLUDES_TAX: "Excludes Tax", TAX_EXEMPT: "Tax Exempt",
+};
+
+export const RENEWAL_OUTCOME_LABELS: Record<string, string> = {
+  RENEWED_AS_IS: "Renewed As-Is", RENEWED_WITH_CHANGES: "Renewed with Changes",
+  REMARKET: "Remarketed", NEW_PLACEMENT: "New Placement",
+};
+
+export const COVER_MULTIPLE_BASE_LABELS: Record<string, string> = {
+  BASIC_SALARY: "Basic Salary", ANNUAL_CTC: "Annual CTC", FIXED_AMOUNT: "Fixed Amount",
+};
+
+export const EMPLOYEE_ELIGIBILITY_LABELS: Record<string, string> = {
+  ALL_EMPLOYEES: "All Employees", MANAGERS_ONLY: "Managers Only",
+  DIRECTORS_ONLY: "Directors Only", CUSTOM: "Custom",
+};
+
 export interface CategoryBenchmark {
   category: string;
   categoryLabel: string;
@@ -259,6 +425,15 @@ export interface CategoryBenchmark {
   pctCore: number;
   pctVoluntary: number;
   pctFlexible: number;
+  // Plan design stats
+  planDesignStats: PlanDesignCategoryStats | null;
+  generosityIndex: GenerosityIndex | null;
+  maternitySpecificStats: MaternitySpecificStats | null;
+  dentalSpecificStats: DentalSpecificStats | null;
+  visionStats: VisionCategoryStats | null;
+  brokerCarrierStats: BrokerCarrierStats | null;
+  policyMetadataStats: PolicyMetadataStats | null;
+  regulatoryStats: RegulatoryStats | null;
   // Reference data metadata (only present when dataQuality === "reference")
   confidenceLevel?: string | null;
   sourceDescription?: string | null;
@@ -339,6 +514,63 @@ export interface CompanyPosition {
   paternityTotalLeaveWeeks: number | null;
   paternityAboveStatutory: boolean | null;
   paternitySharedParentalLeave: boolean | null;
+  // Plan Design
+  deductibleAmount: number | null;
+  deductibleCurrency: string | null;
+  coPayPercent: number | null;
+  coPayMaxAmount: number | null;
+  sumInsured: number | null;
+  sumInsuredCurrency: string | null;
+  coverMultiple: number | null;
+  coverMultipleBase: string | null;
+  roomCategory: string | null;
+  waitingPeriodDays: number | null;
+  benefitMaxAnnual: number | null;
+  benefitMaxCurrency: string | null;
+  reimbursementPercent: number | null;
+  benefitDurationDays: number | null;
+  eliminationPeriodDays: number | null;
+  // Coverage Scope
+  insuredLives: number | null;
+  dependentCoverageType: string | null;
+  maxDependentsPerEmployee: number | null;
+  coverageScope: string | null;
+  networkType: string | null;
+  hospitalLevel: string | null;
+  // Regulatory & Tax
+  mandatoryClassification: string | null;
+  taxTreatment: string | null;
+  taxRatePercent: number | null;
+  employeeEligibility: string | null;
+  eligibilityNotes: string | null;
+  // Carrier & Broker Detail
+  carrierTerminationNoticeDays: number | null;
+  brokerCommissionPercent: number | null;
+  brokerFee: number | null;
+  brokerFeeCurrency: string | null;
+  // Multinational Pooling
+  inMultinationalPool: boolean;
+  poolProviderName: string | null;
+  // Bundling / Riders
+  isRider: boolean;
+  parentBenefitEntryId: string | null;
+  riderDescription: string | null;
+  // Maternity Specific
+  maternityNormalDelivery: number | null;
+  maternityCSection: number | null;
+  maternityCurrency: string | null;
+  // Dental Specific
+  dentalAnnualMax: number | null;
+  dentalPreventiveCoverage: boolean | null;
+  dentalMajorCoverage: boolean | null;
+  // Vision Specific
+  visionAnnualMax: number | null;
+  visionExamCovered: boolean | null;
+  // Policy Metadata
+  policyContractLength: number | null;
+  lastRenewalOutcome: string | null;
+  // Generosity
+  generosityScore: number | null;
 }
 
 export interface PlatformBenchmark {
